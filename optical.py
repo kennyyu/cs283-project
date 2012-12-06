@@ -117,7 +117,7 @@ def main():
         retval2, frame2 = capture.read()
         if not retval1 or not retval2:
             print "could not grab frames"
-            break
+            return
 
         # Mirror the frames to mimic webcam motion
         frame1 = cv2.flip(frame1, 1)
