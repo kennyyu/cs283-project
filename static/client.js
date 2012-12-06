@@ -5,6 +5,10 @@ $(document).ready(function(){
     var canvas = $("#canvas");
     var ctx = canvas.get()[0].getContext('2d');
 
+    // mirror the canvas
+    ctx.translate(canvasSource.width, 0);
+    ctx.scale(-1, 1);
+
     // request access to webcam
     navigator.webkitGetUserMedia(
         {video: true, audio: false},
