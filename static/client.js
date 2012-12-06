@@ -1,12 +1,15 @@
 $(document).ready(function(){
 
+    var WIDTH = 320;
+    var HEIGHT = 240;
+
     // variables for the DOM elements
     var video = $("#live").get()[0];
     var canvas = $("#canvas");
     var ctx = canvas.get()[0].getContext('2d');
 
     // mirror the canvas
-    ctx.translate(canvasSource.width, 0);
+    ctx.translate(WIDTH, 0);
     ctx.scale(-1, 1);
 
     // request access to webcam
@@ -37,7 +40,7 @@ $(document).ready(function(){
     // send a constant stream to the server
     timer = setInterval(
         function () {
-            ctx.drawImage(video, 0, 0, 320, 240);
+            ctx.drawImage(video, 0, 0, WIDTH, HEIGHT);
             var data = canvas.get()[0].toDataURL('image/jpeg', 1.0);
             ws.send(data.split(',')[1]);
         }, 250);
