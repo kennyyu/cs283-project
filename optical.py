@@ -7,8 +7,8 @@ FACE_CASCADE_NAME = "/usr/local/share/OpenCV/haarcascades/haarcascade_frontalfac
 FACE_CASCADE = cv2.CascadeClassifier(FACE_CASCADE_NAME)
 
 WINDOW_NAME = "Face Optical Flow"
-FRAME_WIDTH = 640
-FRAME_HEIGHT = 480
+FRAME_WIDTH = 320
+FRAME_HEIGHT = 240
 
 MAX_CORNERS = 100
 
@@ -97,6 +97,7 @@ def detect_and_display(frame1, frame2):
     overall = scale(overall, 0.2)
     cv2.line(frame1, center, float_to_int(add(center, overall)), WHITE, 3)
     print overall
+    return frame1
 
 def main():
     # Ensure cascade was loaded
