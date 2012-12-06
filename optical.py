@@ -95,7 +95,7 @@ def detect_and_display(frame1, frame2):
     # Draw the overall motion
     center = (int(FRAME_WIDTH / 2), int(FRAME_HEIGHT / 2))
     overall = scale(overall, 0.2)
-    cv2.line(frame1, center, float_to_int(add(center, overall)), WHITE)
+    cv2.line(frame1, center, float_to_int(add(center, overall)), WHITE, 3)
     print overall
 
 def main():
