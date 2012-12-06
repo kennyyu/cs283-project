@@ -10,7 +10,9 @@ WINDOW_NAME = "Face Optical Flow"
 FRAME_WIDTH = 320
 FRAME_HEIGHT = 240
 
-MAX_CORNERS = 100
+MAX_CORNERS = 100 # maximum number of corners per box
+MIN_THRESHOLD = 10 # remove distances that are too small
+MAX_THRESHOLD = 50 # remove distances that are too big
 
 # Colors
 RED = cv2.cv.Scalar(0, 0, 255)
@@ -49,6 +51,11 @@ def detect_and_display(frame1, frame2):
                                           0 | cv2.cv.CV_HAAR_SCALE_IMAGE,
                                           (30,30))
 
+    # If there are no faces, then quit
+    if faces == None or len(faces) == 0:
+        print (0,0)
+        return frame1
+
     # Only keep the largest face
     fmax = [0, 0, 0, 0]
     for f in faces:
@@ -80,9 +87,8 @@ def detect_and_display(frame1, frame2):
     features2, status, err = cv2.calcOpticalFlowPyrLK(frame_gray1, frame_gray2,
                                                       features1)
 
-    MIN_THRESHOLD = 10 # remove distances that are too small
-    MAX_THRESHOLD = 50 # remove distances that are too big
-    overall = (0, 0) # overall motion of the frame
+    # Calculate the total aggregate direction of the scene
+    overall = (0, 0)
     n = len(features1)
     for i in range(0, n):
         if status[i] == 1:
