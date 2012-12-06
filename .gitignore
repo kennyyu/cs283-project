@@ -6,3 +6,7 @@
 *.dvi
 *.svn
 *proposal.out
+.cproject
+.pydevproject
+.project
+.settings
