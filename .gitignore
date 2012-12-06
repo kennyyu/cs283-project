@@ -10,3 +10,5 @@
 .pydevproject
 .project
 .settings
+*.pyc
+tmp

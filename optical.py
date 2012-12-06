@@ -80,14 +80,15 @@ def detect_and_display(frame1, frame2):
     features2, status, err = cv2.calcOpticalFlowPyrLK(frame_gray1, frame_gray2,
                                                       features1)
 
-    threshold = 5 # remove distances that are too small
+    MIN_THRESHOLD = 10 # remove distances that are too small
+    MAX_THRESHOLD = 50 # remove distances that are too big
     overall = (0, 0) # overall motion of the frame
     n = len(features1)
     for i in range(0, n):
         if status[i] == 1:
             oldpt = (features1[i][0][0], features1[i][0][1])
             newpt = (features2[i][0][0], features2[i][0][1])
-            if dist(oldpt, newpt) > threshold:
+            if MIN_THRESHOLD < dist(oldpt, newpt) < MAX_THRESHOLD:
                 cv2.circle(frame1, newpt, 2, GREEN)
                 cv2.line(frame1, oldpt, newpt, GREEN)
                 overall = add(overall, subtract(newpt, oldpt))
