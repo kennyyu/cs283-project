@@ -1,13 +1,12 @@
+import base64
 import cv2
+import optical
 import os
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
-import optical
-import numpy as np
-import StringIO
-import Image
-import base64
+
+DIRECTORY = "tmp"
 
 settings = {
     "static_path": os.path.join(os.path.dirname(__file__), "static"),
@@ -17,14 +16,12 @@ class MainHandler(tornado.web.RequestHandler):
     def get(self):
         self.render("index.html")
 
-class FooHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.write("hi")
-
-class EchoWebSocketHandler(tornado.websocket.WebSocketHandler):
+class VideoWebSocketHandler(tornado.websocket.WebSocketHandler):
     def open(self):
         print "Websocket opened"
         self.prev = None
+        if not os.path.exists(DIRECTORY):
+            os.makedirs(DIRECTORY)
 
     def on_message(self, message):
         newim = self.parse_image(message)
@@ -32,46 +29,23 @@ class EchoWebSocketHandler(tornado.websocket.WebSocketHandler):
             self.prev = newim
         else:
             retim = optical.detect_and_display(self.prev, newim)
-            cv2.imwrite("yes.png", retim)
+            cv2.imwrite(DIRECTORY + "/out.png", retim)
             self.prev = newim
-            #retval, encodedim = cv2.imencode(".png", retim)
-            #self.write_message(encodedim)
-            file = open("yes.png", "r")
+            file = open(DIRECTORY + "/out.png", "r")
             self.write_message(str(file.read()), binary=True)
 
     def on_close(self):
         print "Websocket closed"
 
     def parse_image(self, buf):
-        #print(type(buf))
-        #print(dir(buf))
-        #print(np.fromstring(buf, dtype=np.uint8))
-        #print(np.asarray(buf.decode("base64")))
-        #im = cv2.imdecode(np.asarray(buf.decode("base64")), 1)
-        #im = cv2.cv.fromarray(np.fromstring(buf, dtype=np.uint8), True)
-        #im = np.fromstring(buf, dtype=np.uint8)
-        #pilImage = Image.open(StringIO.StringIO(buf));
-        #npImage = np.array(pilImage)
-        #im = cv2.cv.fromarray(npImage)
-        #im = cv2.imdecode(buf.decode("base64"))
         img_str = base64.b64decode(buf)
-        g = open("out.jpeg", "w");
-        g.write(base64.b64decode(buf))
-        #g.flush()
-        #img = Image.open(StringIO.StringIO(img_str))
-        #img.save("test2.jpeg")
-        #npImage = np.array(img)
-        #im = cv2.cv.fromarray(npImage)
-        #im = cv2.imdecode(np.asarray(base64.b64decode(buf)), 1)
-        npImage = cv2.imread("out.jpeg")
-        #print(npImage)
-        cv2.imwrite("test.jpeg", npImage)
-        return npImage
+        img = open(DIRECTORY + "/in.jpeg", "w+");
+        img.write(base64.b64decode(buf))
+        return cv2.imread(DIRECTORY + "/in.jpeg")
 
 application = tornado.web.Application([
     (r"/", MainHandler),
-    (r"/foo", FooHandler),
-    (r"/websocket", EchoWebSocketHandler),
+    (r"/websocket", VideoWebSocketHandler),
     (r"/static", tornado.web.StaticFileHandler,
      dict(path=settings['static_path'])),
 ], **settings)
