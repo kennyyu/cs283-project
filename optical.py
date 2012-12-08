@@ -11,7 +11,7 @@ FRAME_WIDTH = 320
 FRAME_HEIGHT = 240
 
 MAX_CORNERS = 100 # maximum number of corners per box
-MIN_THRESHOLD = 10 # remove distances that are too small
+MIN_THRESHOLD = 3 # remove distances that are too small
 MAX_THRESHOLD = 50 # remove distances that are too big
 
 # Colors
@@ -19,6 +19,16 @@ RED = cv2.cv.Scalar(0, 0, 255)
 GREEN = cv2.cv.Scalar(0, 255, 0)
 BLUE = cv2.cv.Scalar(255, 0, 0)
 WHITE = cv2.cv.Scalar(255, 255, 255)
+
+# Directions
+DIRECTIONS = {
+    "NONE" : 0,
+    "UP" : 1,
+    "DOWN" : 2,
+    "LEFT" : 3,
+    "RIGHT" : 4,
+}
+
 
 # Some useful functions for dealing with vectors
 def add((u, v), (x, y)):
@@ -53,8 +63,9 @@ def detect_and_display(frame1, frame2):
 
     # If there are no faces, then quit
     if faces == None or len(faces) == 0:
-        print (0,0)
-        return frame1
+        overall = (0,0)
+        print overall
+        return find_direction(overall), frame1
 
     # Only keep the largest face
     fmax = [0, 0, 0, 0]
@@ -104,7 +115,21 @@ def detect_and_display(frame1, frame2):
     overall = scale(overall, 0.2)
     cv2.line(frame1, center, float_to_int(add(center, overall)), WHITE, 3)
     print overall
-    return frame1
+    return find_direction(overall), frame1
+
+def find_direction((x,y)):
+    if x == 0 and y == 0:
+        return DIRECTIONS["NONE"]
+    if abs(x) > abs(y):
+        if x > 0:
+            return DIRECTIONS["UP"]
+        else:
+            return DIRECTIONS["DOWN"]
+    else:
+        if y > 0:
+            return DIRECTIONS["RIGHT"]
+        else:
+            return DIRECTIONS["LEFT"]
 
 def main():
     # Ensure cascade was loaded

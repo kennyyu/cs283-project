@@ -28,11 +28,11 @@ class VideoWebSocketHandler(tornado.websocket.WebSocketHandler):
         if self.prev == None:
             self.prev = newim
         else:
-            retim = optical.detect_and_display(self.prev, newim)
+            direction, retim = optical.detect_and_display(self.prev, newim)
             cv2.imwrite(DIRECTORY + "/out.png", retim)
             self.prev = newim
             file = open(DIRECTORY + "/out.png", "r")
-            self.write_message(str(file.read()), binary=True)
+            self.write_message(str(direction) + str(file.read()), binary=True)
 
     def on_close(self):
         print "Websocket closed"
