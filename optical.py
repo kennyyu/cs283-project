@@ -72,8 +72,8 @@ def detect_and_display(frame1, frame2):
     frame_roi = None
     if width > 0 and height > 0:
         frame_roi = np.zeros(shape=frame_gray1.shape, dtype=np.dtype("uint8"))
-        submatrix = np.ix_(range(y1, min(y1 + width, FRAME_WIDTH)),
-                           range(x1, min(x1 + height, FRAME_HEIGHT)))
+        submatrix = np.ix_(range(int(y1), int(min(y1 + width, FRAME_WIDTH))),
+                           range(int(x1), int(min(x1 + height, FRAME_HEIGHT))))
         frame_roi[submatrix] += 1
 
     # Find features of first frame
@@ -102,7 +102,6 @@ def detect_and_display(frame1, frame2):
 
     # Draw the overall motion
     center = (int(FRAME_WIDTH / 2), int(FRAME_HEIGHT / 2))
-    overall = scale(overall, 0.2)
     cv2.line(frame1, center, float_to_int(add(center, overall)), WHITE, 3)
     print overall
     return direction_string(overall), frame1

@@ -16,13 +16,18 @@ $(document).ready(function(){
     var canvas = $("#canvas");
     var ctx = canvas.get()[0].getContext('2d');
 
+    // scale back the overall direction of the motion vector
+    var SCALE_FACTOR = 0.2;
+
     // move map in the corresponding direction
     function get_direction(float_blob) {
         var reader = new FileReader();
         reader.onload = (function(blob) {
             return function(event) {
-                var x = parseFloat(event.target.result.slice(0,5)) * WIDTH;
-                var y = parseFloat(event.target.result.slice(5,10)) * HEIGHT;
+                var x = parseFloat(event.target.result.slice(0,5))
+                    * WIDTH * SCALE_FACTOR;
+                var y = parseFloat(event.target.result.slice(5,10))
+                    * HEIGHT * SCALE_FACTOR;
                 $("#direction").html(x + "," + y);
                 map.panBy(x, y);
             };
