@@ -20,16 +20,6 @@ GREEN = cv2.cv.Scalar(0, 255, 0)
 BLUE = cv2.cv.Scalar(255, 0, 0)
 WHITE = cv2.cv.Scalar(255, 255, 255)
 
-# Directions
-DIRECTIONS = {
-    "NONE" : 0,
-    "UP" : 1,
-    "DOWN" : 2,
-    "LEFT" : 3,
-    "RIGHT" : 4,
-}
-
-
 # Some useful functions for dealing with vectors
 def add((u, v), (x, y)):
     return (u + x, v + y)
@@ -65,7 +55,7 @@ def detect_and_display(frame1, frame2):
     if faces == None or len(faces) == 0:
         overall = (0,0)
         print overall
-        return find_direction(overall), frame1
+        return direction_string(overall), frame1
 
     # Only keep the largest face
     fmax = [0, 0, 0, 0]
@@ -115,21 +105,13 @@ def detect_and_display(frame1, frame2):
     overall = scale(overall, 0.2)
     cv2.line(frame1, center, float_to_int(add(center, overall)), WHITE, 3)
     print overall
-    return find_direction(overall), frame1
+    return direction_string(overall), frame1
 
-def find_direction((x,y)):
-    if x == 0 and y == 0:
-        return DIRECTIONS["NONE"]
-    if abs(x) > abs(y):
-        if x > 0:
-            return DIRECTIONS["UP"]
-        else:
-            return DIRECTIONS["DOWN"]
-    else:
-        if y > 0:
-            return DIRECTIONS["RIGHT"]
-        else:
-            return DIRECTIONS["LEFT"]
+def direction_string((x,y)):
+    # Normalize x and y
+    a = x / FRAME_WIDTH;
+    b = y / FRAME_HEIGHT;
+    return "%+0.2f%+0.2f" % (a,b)
 
 def main():
     # Ensure cascade was loaded

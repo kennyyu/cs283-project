@@ -32,7 +32,8 @@ class VideoWebSocketHandler(tornado.websocket.WebSocketHandler):
             cv2.imwrite(DIRECTORY + "/out.png", retim)
             self.prev = newim
             file = open(DIRECTORY + "/out.png", "r")
-            self.write_message(str(direction) + str(file.read()), binary=True)
+            self.write_message(direction + str(file.read()), binary=True)
+            file.close()
 
     def on_close(self):
         print "Websocket closed"
@@ -41,6 +42,7 @@ class VideoWebSocketHandler(tornado.websocket.WebSocketHandler):
         img_str = base64.b64decode(buf)
         img = open(DIRECTORY + "/in.jpeg", "w+");
         img.write(base64.b64decode(buf))
+        img.close()
         return cv2.imread(DIRECTORY + "/in.jpeg")
 
 application = tornado.web.Application([

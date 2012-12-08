@@ -16,51 +16,18 @@ $(document).ready(function(){
     var canvas = $("#canvas");
     var ctx = canvas.get()[0].getContext('2d');
 
-    // directions of overall motion
-    var DIRECTIONS = {
-        "NONE" : 0,
-        "UP" : 1,
-        "DOWN" : 2,
-        "LEFT" : 3,
-        "RIGHT" : 4,
-    };
-
-    function string_of_direction(direction) {
-        switch(direction) {
-        case DIRECTIONS["NONE"]:
-            return "NONE";
-        case DIRECTIONS["UP"]:
-            return "UP";
-        case DIRECTIONS["DOWN"]:
-            return "DOWN";
-        case DIRECTIONS["LEFT"]:
-            return "LEFT";
-        case DIRECTIONS["RIGHT"]:
-            return "RIGHT";
-        default:
-            return "UNDEFINED";
-        }
-    }
-
-    function move_in_direction(direction) {
-        switch(direction) {
-        case DIRECTIONS["NONE"]:
-            return;
-        case DIRECTIONS["UP"]:
-            map.panBy(50, 0);
-            break;
-        case DIRECTIONS["DOWN"]:
-            map.panBy(-50, 0);
-            break;
-        case DIRECTIONS["LEFT"]:
-            map.panBy(0, -50);
-            break;
-        case DIRECTIONS["RIGHT"]:
-            map.panBy(0, 50);
-            break;
-        default:
-            return;
-        }
+    // move map in the corresponding direction
+    function get_direction(float_blob) {
+        var reader = new FileReader();
+        reader.onload = (function(blob) {
+            return function(event) {
+                var x = parseFloat(event.target.result.slice(0,5)) * WIDTH;
+                var y = parseFloat(event.target.result.slice(5,10)) * HEIGHT;
+                $("#direction").html(x + "," + y);
+                map.panBy(x, y);
+            };
+        })(float_blob);
+        reader.readAsBinaryString(float_blob);
     }
 
     // mirror the canvas
@@ -87,23 +54,14 @@ $(document).ready(function(){
         var target = document.getElementById("target");
 
         // display the updated frame
-        url = window.webkitURL.createObjectURL(msg.data.slice(1, msg.data.size));
+        url = window.webkitURL.createObjectURL(msg.data.slice(10, msg.data.size));
         target.onload = function() {
             window.webkitURL.revokeObjectURL(url);
         };
         target.src = url;
 
         // handle the direction of the motion in the frame
-        direction_blob = msg.data.slice(0,1);
-        var reader = new FileReader();
-        reader.onload = (function(blob) {
-            return function(event) {
-                var direction = parseInt(event.target.result);
-                $("#direction").html(direction + "," + string_of_direction(direction));
-                move_in_direction(direction);
-            };
-        })(direction_blob);
-        reader.readAsBinaryString(direction_blob);
+        get_direction(msg.data.slice(0,10));
     }
 
     // send a constant stream to the server
