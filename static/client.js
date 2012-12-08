@@ -9,19 +9,20 @@ $(document).ready(function(){
     var map = new google.maps.Map(document.getElementById("map_canvas"),
                                   mapOptions);
 
+    // scale back the overall direction of the motion vector
+    var SCALE_FACTOR = 0.2;
+
     // variables for the DOM elements
     var WIDTH = 320;
     var HEIGHT = 240;
     var video = $("#live").get()[0];
+    var direction = $("#direction");
     var canvas = $("#canvas");
     var ctx = canvas.get()[0].getContext('2d');
 
     // mirror the canvas
     ctx.translate(WIDTH, 0);
     ctx.scale(-1, 1);
-
-    // scale back the overall direction of the motion vector
-    var SCALE_FACTOR = 0.2;
 
     // move map in the corresponding direction
     function get_direction(float_blob) {
@@ -32,18 +33,21 @@ $(document).ready(function(){
                     * WIDTH * SCALE_FACTOR;
                 var y = parseFloat(event.target.result.slice(5,10))
                     * HEIGHT * SCALE_FACTOR;
-                $("#direction").html(x + "," + y);
+                direction.html(x + "," + y);
                 map.panBy(x, y);
             };
         })(float_blob);
         reader.readAsBinaryString(float_blob);
     }
 
+    // interval variable to send a constant stream to the server
+    var timer;
+
     // establish websocket
     var ws = new WebSocket("ws://localhost:8888/websocket");
-    ws.onopen = function () {
+    ws.onopen = function() {
         console.log("Opened connection to websocket");
-    }
+    };
     ws.onmessage = function(msg) {
         // display the updated frame
         var target = document.getElementById("target");
@@ -55,10 +59,11 @@ $(document).ready(function(){
 
         // handle the direction of the motion in the frame
         get_direction(msg.data.slice(0,10));
-    }
+    };
     ws.onclose = function(msg) {
+        window.clearInterval(timer);
         console.log("Closed connection to websocket");
-    }
+    };
 
     // request access to webcam
     navigator.webkitGetUserMedia(
