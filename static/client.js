@@ -16,6 +16,10 @@ $(document).ready(function(){
     var canvas = $("#canvas");
     var ctx = canvas.get()[0].getContext('2d');
 
+    // mirror the canvas
+    ctx.translate(WIDTH, 0);
+    ctx.scale(-1, 1);
+
     // scale back the overall direction of the motion vector
     var SCALE_FACTOR = 0.2;
 
@@ -35,30 +39,14 @@ $(document).ready(function(){
         reader.readAsBinaryString(float_blob);
     }
 
-    // mirror the canvas
-    ctx.translate(WIDTH, 0);
-    ctx.scale(-1, 1);
-
-    // request access to webcam
-    navigator.webkitGetUserMedia(
-        {video: true, audio: false},
-        function(stream) {
-            video.src = webkitURL.createObjectURL(stream);
-        },
-        function(err) {
-            console.log("Unable to get video stream!")
-        }
-    );
-
     // establish websocket
     var ws = new WebSocket("ws://localhost:8888/websocket");
     ws.onopen = function () {
         console.log("Opened connection to websocket");
     }
     ws.onmessage = function(msg) {
-        var target = document.getElementById("target");
-
         // display the updated frame
+        var target = document.getElementById("target");
         url = window.webkitURL.createObjectURL(msg.data.slice(10, msg.data.size));
         target.onload = function() {
             window.webkitURL.revokeObjectURL(url);
@@ -68,13 +56,27 @@ $(document).ready(function(){
         // handle the direction of the motion in the frame
         get_direction(msg.data.slice(0,10));
     }
+    ws.onclose = function(msg) {
+        console.log("Closed connection to websocket");
+    }
 
-    // send a constant stream to the server
-    timer = setInterval(
-        function () {
-            ctx.drawImage(video, 0, 0, WIDTH, HEIGHT);
-            var data = canvas.get()[0].toDataURL('image/jpeg', 1.0);
-            ws.send(data.split(',')[1]);
-        }, 250);
+    // request access to webcam
+    navigator.webkitGetUserMedia(
+        {video: true, audio: false},
+        function(stream) {
+            video.src = webkitURL.createObjectURL(stream);
+            // send a constant stream to the server
+            timer = setInterval(
+                function () {
+                    ctx.drawImage(video, 0, 0, WIDTH, HEIGHT);
+                    var data = canvas.get()[0].toDataURL('image/jpeg', 1.0);
+                    ws.send(data.split(',')[1]);
+                }, 250);
+        },
+        function(err) {
+            ws.close();
+            console.log("Unable to get video stream!, Error: " + err)
+        }
+    );
 
 });
