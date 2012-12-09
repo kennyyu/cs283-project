@@ -59,12 +59,16 @@ def detect_and_display(frame1, frame2):
                                             qualityLevel=0.01,
                                             minDistance=0.01,
                                             mask=frame_roi)
+        if features1 is None:
+            features1 = np.array([])
         for v in features1:
             cv2.circle(frame1, (v[0][0], v[0][1]), 2, RED)
 
         # Use Lucas-Kanade to find points in second frame
         features2, status, err = cv2.calcOpticalFlowPyrLK(frame_gray1, frame_gray2,
                                                           features1)
+        if features2 is None:
+            features2 = np.array([])
 
         # Calculate the total aggregate direction of the scene
         overall = overall_direction(frame1, features1, features2, status)
@@ -72,7 +76,6 @@ def detect_and_display(frame1, frame2):
     # Draw the overall motion
     center = (int(FRAME_WIDTH / 2), int(FRAME_HEIGHT / 2))
     cv2.line(frame1, center, float_to_int(add(center, overall)), WHITE, 3)
-    print overall
     return direction_string(overall), frame1
 
 def get_frame_roi(frame_gray, frame):

@@ -51,8 +51,10 @@ class VideoWebSocketHandler(tornado.websocket.WebSocketHandler):
             file.close()
 
     def on_close(self):
-        os.remove(self.file_in)
-        os.remove(self.file_out)
+        if os.path.isfile(self.file_in):
+            os.remove(self.file_in)
+        if os.path.isfile(self.file_out):
+            os.remove(self.file_out)
         print "Websocket " + str(self.id) + " closed"
 
     def parse_image(self, buf):

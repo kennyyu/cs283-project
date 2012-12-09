@@ -84,4 +84,9 @@ $(document).ready(function(){
         }
     );
 
+    // close socket when the document closes
+    $(document).unload(function() {
+        ws.close();
+    });
+
 });
