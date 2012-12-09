@@ -21,6 +21,7 @@ def main():
     face_cascade = detect.CascadeDetector(FACE_CASCADE_NAME)
     hand_cascade = detect.CascadeDetector(HAND_CASCADE_NAME)
     optical = detect.LKOpticalFlow()
+    subtractor = detect.BGSubtractor(10)
 
     while True:
         retval1, frame1 = capture.read()
@@ -37,10 +38,13 @@ def main():
         faces = face_cascade.find(frame1, minNeighbors=2, minSize=(30,30))
         no_faces = face_cascade.remove(frame1, faces)
 
+        # Remove background
+        foreground = subtractor.bgremove(no_faces)
+
         # Detect hands in the scene with no faces
-        hands = hand_cascade.find(no_faces, scaleFactor=3, minNeighbors=15,
+        hands = hand_cascade.find(foreground, scaleFactor=3, minNeighbors=15,
                                   minSize=(25,35))
-        frame1 = no_faces
+        frame1 = foreground
         largest = hand_cascade.largest(frame1, hands)
         mask = largest.mask(frame1)
 

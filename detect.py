@@ -72,6 +72,10 @@ class Rect(object):
                                              str(self.width), str(self.height))
 
 class CascadeDetector(object):
+    """
+    Wrapper class for a CascadeClassifier object. Provides utility methods
+    to find the largest object and to mask objects out of frames.
+    """
 
     def __init__(self, cascade_name):
         """
@@ -192,3 +196,43 @@ class LKOpticalFlow(object):
                  Color.WHITE, 3)
         return (direction, frame_prev)
 
+class BGSubtractor(object):
+    """
+    Removes background from a sequence of frames by maintaining a history
+    of frames seen so far.
+    """
+
+    def __init__(self, nframes):
+        """
+        Constructor. nframes is the number of frames to keep in the history.
+        """
+        self.nframes = nframes
+        self.frames = []
+
+    def bgremove(self, frame, threshold=20, ksize=(15,15)):
+        """
+        Removes the background of the frame, using thresholding the difference with
+        the provided the threshold. If fewer than nframes have been seen, the frame
+        will be returned unchanged.
+        """
+        # If we don't have enough frames in our history, return the frame
+        if len(self.frames) < self.nframes:
+            self.frames.append(frame)
+            return frame
+
+        # Remove the oldest frame our history and append the new frame
+        original = self.frames[0]
+        self.frames = self.frames[1:]
+        self.frames.append(frame)
+
+        # Subtract the current frame and the oldest frame
+        difference = cv2.absdiff(frame, original)
+        _, difference = cv2.threshold(difference, threshold, 255, cv2.THRESH_BINARY)
+        difference = cv2.GaussianBlur(difference, ksize, 1)
+        gray = bgr2gray(difference)
+        indices = gray.nonzero()
+
+        # Set entries to zero whose difference did not pass the threshold
+        mask = np.zeros(frame.shape, dtype=frame.dtype)
+        mask[indices] = frame[indices]
+        return mask
