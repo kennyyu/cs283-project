@@ -1,7 +1,8 @@
 import cv2
 import detect
 
-CASCADE_NAME = "/usr/local/share/OpenCV/haarcascades/haarcascade_frontalface_alt.xml";
+FACE_CASCADE_NAME = "/usr/local/share/OpenCV/haarcascades/haarcascade_frontalface_alt.xml";
+HAND_CASCADE_NAME = "hand_front.xml"
 WINDOW_NAME = "Pipeline"
 FRAME_WIDTH = 320
 FRAME_HEIGHT = 240
@@ -17,7 +18,8 @@ def main():
     capture.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
     capture.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
 
-    cascade = detect.CascadeDetector(CASCADE_NAME)
+    face_cascade = detect.CascadeDetector(FACE_CASCADE_NAME)
+    hand_cascade = detect.CascadeDetector(HAND_CASCADE_NAME)
     optical = detect.LKOpticalFlow()
 
     while True:
@@ -31,10 +33,15 @@ def main():
         frame1 = cv2.flip(frame1, 1)
         frame2 = cv2.flip(frame2, 1)
 
-        # Detect objects in the scene
-        objects = cascade.find(frame1, minNeighbors=2, minSize=(30,30))
-        largest = cascade.largest(frame1, objects)
-        result = cascade.remove(frame1, objects)
+        # Remove faces from the scene
+        faces = face_cascade.find(frame1, minNeighbors=2, minSize=(30,30))
+        no_faces = face_cascade.remove(frame1, faces)
+
+        # Detect hands in the scene with no faces
+        hands = hand_cascade.find(no_faces, scaleFactor=3, minNeighbors=15,
+                                  minSize=(25,35))
+        frame1 = no_faces
+        largest = hand_cascade.largest(frame1, hands)
         mask = largest.mask(frame1)
 
         # Detect motion in the scene

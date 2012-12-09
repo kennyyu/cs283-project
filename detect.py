@@ -61,8 +61,8 @@ class Rect(object):
         """ Returns a mask for frame, using the bounding box. """
         mask = np.zeros(shape=(frame.shape[0], frame.shape[1]),
                         dtype=np.dtype("uint8"))
-        (u, v) = np.ix_(range(self.y, self.y + self.width),
-                        range(self.x, self.x + self.height))
+        (u, v) = np.ix_(range(self.y, min(self.y + self.width, frame.shape[0])),
+                        range(self.x, min(self.x + self.height, frame.shape[1])))
         indices = (u.astype(int), v.astype(int))
         mask[indices] += 1
         return mask
@@ -95,8 +95,10 @@ class CascadeDetector(object):
         objects (x, y, width, height).
         """
         gray = bgr2gray(frame)
-        objects = self.cascade.detectMultiScale(gray, scaleFactor, minNeighbors,
-                                                flags, minSize, maxSize)
+        objects = self.cascade.detectMultiScale(gray, scaleFactor=scaleFactor,
+                                                minNeighbors=minNeighbors,
+                                                flags=flags,
+                                                minSize=minSize, maxSize=maxSize)
         if objects is None or len(objects) == 0:
             objects = []
         return objects
@@ -157,17 +159,20 @@ class LKOpticalFlow(object):
         features_prev = cv2.goodFeaturesToTrack(gray_prev, maxCorners,
                                                 qualityLevel, minDistance,
                                                 mask=mask)
-        if features_prev is not None:
-            for f in features_prev:
-                cv2.circle(frame_prev, (f[0][0], f[0][1]), 2, color_prev)
 
-            # Use Lucas-Kanade to find points in second frame
-            features_next, status, err = cv2.calcOpticalFlowPyrLK(gray_prev,
-                                                                  gray_next,
-                                                                  features_prev)
+        # Overall direction of the scene
+        direction = (0, 0)
+
+        if features_prev is None:
+            return (direction, frame_prev)
+        for f in features_prev:
+            cv2.circle(frame_prev, (f[0][0], f[0][1]), 2, color_prev)
+
+        # Use Lucas-Kanade to find points in second frame
+        features_next, status, err = cv2.calcOpticalFlowPyrLK(gray_prev, gray_next,
+                                                                features_prev)
 
         # Compute overall direction of the scene
-        direction = (0, 0)
         for i in range(0, len(features_prev)):
             # Ff the feature was found in the second frame
             if status[i] == 1:
