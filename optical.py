@@ -19,6 +19,7 @@ RED = cv2.cv.Scalar(0, 0, 255)
 GREEN = cv2.cv.Scalar(0, 255, 0)
 BLUE = cv2.cv.Scalar(255, 0, 0)
 WHITE = cv2.cv.Scalar(255, 255, 255)
+YELLOW = cv2.cv.Scalar(0, 255, 255)
 
 # Some useful functions for dealing with vectors
 def add((u, v), (x, y)):
@@ -60,7 +61,7 @@ def detect_and_display(frame1, frame2):
                                             minDistance=0.01,
                                             mask=frame_roi)
         if features1 is None:
-            features1 = np.array([])
+            return direction_string(overall), frame1
         for v in features1:
             cv2.circle(frame1, (v[0][0], v[0][1]), 2, RED)
 
@@ -68,7 +69,7 @@ def detect_and_display(frame1, frame2):
         features2, status, err = cv2.calcOpticalFlowPyrLK(frame_gray1, frame_gray2,
                                                           features1)
         if features2 is None:
-            features2 = np.array([])
+            return direction_string(overall), frame1
 
         # Calculate the total aggregate direction of the scene
         overall = overall_direction(frame1, features1, features2, status)
@@ -95,6 +96,7 @@ def get_frame_roi(frame_gray, frame):
     # Only keep the largest face
     objmax = [0, 0, 0, 0]
     for obj in objects:
+        cv2.rectangle(frame, (obj[0], obj[1]), (obj[0] + obj[2], obj[1] + obj[3]), YELLOW)
         if obj[2] * obj[3] > objmax[2] * objmax[3]:
             objmax = obj
     x = int(objmax[0])
