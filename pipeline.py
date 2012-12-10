@@ -63,7 +63,7 @@ def main():
         search_filtered = search_box.filter(foreground)
 
         # Detect hands in the scene with no faces
-        hands = hand_cascade.find(search_filtered, scaleFactor=1.1, minNeighbors=5,
+        hands = hand_cascade.find(search_filtered, scaleFactor=1.1, minNeighbors=60,
                                   minSize=(25,35))
         largest = hand_cascade.largest(frame1, hands, draw=False)
         mask = largest.mask(frame1)
