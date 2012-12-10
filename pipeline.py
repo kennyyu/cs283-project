@@ -55,11 +55,6 @@ def main():
         foreground = subtractor.bgremove(no_faces)
 
         # Look at the window provided by Kalman prediction
-        #[x, y, vx, vy] = kalman.predict()[0][:4]
-        #print [x, y, vx, vy]
-        #prediction = detect.Rect(x - window / 2, y - window / 2, window, window)
-        #search_box = prediction.filter(foreground)
-        #print(prediction)
         search_filtered = search_box.filter(foreground)
 
         # Detect hands in the scene with no faces
@@ -72,14 +67,6 @@ def main():
         direction, frame_out = optical.direction(frame1, frame2, mask=mask)
 
         # Update Kalman
-        #if largest.width == 0 and largest.height == 0:
-        #    largest = detect.Rect(FRAME_WIDTH / 2, FRAME_HEIGHT / 2, 0, 0)
-        #hand_center = largest.center()
-        #z = np.asarray([hand_center[0], hand_center[1],
-        #                direction[0] / 0.3, direction[1] / 0.3])
-        #print z
-        #kalman.correct(z)
-        #prediction.draw(frame_out, detect.Color.BLUE)
         if largest.width == 0 and largest.height == 0:
             search_box = detect.Rect(0, 0, FRAME_WIDTH, FRAME_HEIGHT)
         else:
