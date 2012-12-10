@@ -49,23 +49,37 @@ class Rect(object):
     """ Utility class for dealing with rectangles. """
 
     def __init__(self, x, y, width, height):
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
+        self.x = int(x)
+        self.y = int(y)
+        self.width = int(width)
+        self.height = int(height)
 
     def center(self):
-        return (int(x + width / 2), int(y + height / 2))
+        return (int(self.x + self.width / 2), int(self.y + self.height / 2))
 
     def mask(self, frame):
         """ Returns a mask for frame, using the bounding box. """
         mask = np.zeros(shape=(frame.shape[0], frame.shape[1]),
                         dtype=np.dtype("uint8"))
-        (u, v) = np.ix_(range(self.y, min(self.y + self.width, frame.shape[0])),
-                        range(self.x, min(self.x + self.height, frame.shape[1])))
+        (u, v) = np.ix_(range(self.y, min(self.y + self.height, frame.shape[0])),
+                        range(self.x, min(self.x + self.width, frame.shape[1])))
         indices = (u.astype(int), v.astype(int))
         mask[indices] += 1
         return mask
+
+    def filter(self, frame):
+        mask = np.zeros(shape=(frame.shape[0], frame.shape[1]),
+                        dtype=np.dtype("uint8"))
+        (u, v) = np.ix_(range(self.y, min(self.y + self.height, frame.shape[0])),
+                        range(self.x, min(self.x + self.width, frame.shape[1])))
+        indices = (u.astype(int), v.astype(int))
+        result = np.zeros(frame.shape, dtype=frame.dtype)
+        result[indices] = frame[indices]
+        return result
+
+    def draw(self, frame, color):
+        cv2.rectangle(frame, (self.x, self.y),
+                      (self.x + self.width, self.y + self.height), color)
 
     def __str__(self):
         return "(x=%s, y=%s, w=%s, h=%s)" % (str(self.x), str(self.y),
@@ -236,3 +250,73 @@ class BGSubtractor(object):
         mask = np.zeros(frame.shape, dtype=frame.dtype)
         mask[indices] = frame[indices]
         return mask
+
+class Kalman(object):
+    """
+    Implementation of a Kalman Filter.
+    See: http://www.cs.unc.edu/~tracker/media/pdf/SIGGRAPH2001_CoursePack_08.pdf
+    OpenCV 2.4.3. is lacking python bindings for this.
+    """
+
+    def __init__(self, n, m, l, p_sigma=1e-1, q_sigma=1e-5, r_sigma=1):
+        """
+        Params:
+            n: dimension of our state (dynamic)
+            m: dimension of our measurements
+            l: dimension of our control
+            p_sigma: entry in our diagonal matrix P (error noise STD)
+            q_sigma: entry in our diagonal matrix Q (process noise STD)
+            r_sigma: entry in our diagonal matrix R (measurement noise STD)
+        """
+        self.n = n
+        self.m = m
+        self.l = l
+        self.p_sigma = p_sigma
+        self.q_sigma = q_sigma
+        self.r_sigma = r_sigma
+
+    def init(self, A, x,
+             B=np.zeros((0,0)),
+             H=np.zeros((0,0)),
+             P=np.zeros((0,0)),
+             Q=np.zeros((0,0)),
+             R=np.zeros((0,0))):
+        """
+        Params:
+            A: transition matrix (n x n)
+            x: initial state (n x 1)
+            B: control matrix (n x l)
+            H: measurement matrix (m x n)
+            P: error noise covariance matrix (n x n)
+            Q: process noise covariance matrix (n x n)
+            R: measurement noise covariance matrix (m x m)
+        """
+        self.A = A
+        self.x = x
+        self.B = B if B.shape == (self.n, self.l) else np.zeros((self.n, self.l))
+        self.H = H if H.shape == (self.m, self.n) else np.zeros((self.m, self.n))
+        self.P = P if P.shape == (self.n, self.n) else np.identity(self.n) * self.p_sigma
+        self.Q = Q if Q.shape == (self.n, self.n) else np.identity(self.n) * self.q_sigma
+        self.R = R if R.shape == (self.m, self.m) else np.identity(self.m) * self.r_sigma
+
+    def predict(self, u=np.zeros((0,0))):
+        """ Returns prior estimation of z. """
+        u = u if u.shape == (self.l, 1) else np.zeros((self.l, 1))
+        self.x = np.dot(self.A, self.x) + np.dot(self.B, u)
+        self.P = np.dot(np.dot(self.A, self.P), self.A.T) + self.Q
+        return self.generate()
+
+    def correct(self, z):
+        """ Returns posterior estimation of z. """
+        K = np.dot(np.dot(self.P, self.H.T),
+                   np.dot(np.dot(self.H, self.P), self.H.T) + self.R)
+        self.x = self.x + np.dot(K, z - np.dot(self.H, self.x))
+        self.P = np.dot(np.identity(self.n) - np.dot(K, self.H), self.P)
+        return self.generate()
+
+    def generate(self):
+        """ Generates an estimation of z. """
+        v = np.random.normal(0, np.linalg.norm(self.R), self.m)
+        return np.dot(self.H, self.x) + v.T
+
+
