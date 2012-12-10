@@ -89,14 +89,6 @@ def main():
                             window_width=100, window_height=180,
                             nframes=20, directionScale=0.1)
 
-    """
-    face_cascade = detect.CascadeDetector(FACE_CASCADE_NAME)
-    hand_cascade = detect.CascadeDetector(HAND_CASCADE_NAME)
-    optical = detect.LKOpticalFlow()
-    subtractor = detect.BGSubtractor(20)
-    kalman = detect.SimpleKalman(FRAME_WIDTH, FRAME_HEIGHT, 100, 180, scale=0.1)
-    """
-
     while True:
         retval1, frame1 = capture.read()
         retval2, frame2 = capture.read()
@@ -108,31 +100,7 @@ def main():
         frame1 = cv2.flip(frame1, 1)
         frame2 = cv2.flip(frame2, 1)
 
-        """
-        # Remove faces from the scene
-        faces = face_cascade.find(frame1, minNeighbors=2, minSize=(30,30))
-        no_faces = face_cascade.remove(frame1, faces)
-
-        # Remove background
-        foreground = subtractor.bgremove(no_faces)
-
-        # Look at the window provided by Kalman prediction
-        search_filtered = kalman.predict().filter(foreground)
-
-        # Detect hands in the scene with no faces
-        hands = hand_cascade.find(search_filtered, scaleFactor=1.1, minNeighbors=60,
-                                  minSize=(25,35))
-        largest = hand_cascade.largest(frame1, hands, draw=False)
-        mask = largest.mask(frame1)
-
-        # Detect motion in the scene
-        direction, frame_out = optical.direction(frame1, frame2, mask=mask)
-
-        # Update Kalman
-        correction = kalman.correct(largest, direction)
-        correction.draw(frame_out, detect.Color.BLUE)
-        """
-
+        # Detect hand and direction of the scene
         direction, frame_out = pipeline.detect(frame1, frame2)
         print(direction)
         cv2.imshow(WINDOW_NAME, frame_out)
