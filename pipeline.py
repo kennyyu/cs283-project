@@ -18,7 +18,7 @@ class Pipeline(object):
     Command line arguments for our pipelines
     """
     parser = argparse.ArgumentParser(description="Optical Flow on Hand Detection")
-    parser.add_argument("-p", "--pipeline", type=str, choices=["full", "simple"],
+    parser.add_argument("-pl", "--pipeline", type=str, choices=["full", "simple"],
                         default="full", dest="pipeline_type",
                         help="type of pipeline to run")
     parser.add_argument("--face_cascade", type=str, default=FACE_CASCADE_NAME,

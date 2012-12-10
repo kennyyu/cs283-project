@@ -90,7 +90,12 @@ application = tornado.web.Application([
 ], **settings)
 
 if __name__ == "__main__":
-    application.listen(8888)
+    pipeline.Pipeline.parser.add_argument("-p", "--port", type=int,
+                                          default=8888, dest="port",
+                                          help="port to listen to")
     args = pipeline.Pipeline.parser.parse_args()
-    PIPELINE = pipeline.Pipeline.create(**vars(args))
+    kwargs = vars(args)
+    application.listen(kwargs["port"])
+    del kwargs["port"]
+    PIPELINE = pipeline.Pipeline.create(**kwargs)
     tornado.ioloop.IOLoop.instance().start()
