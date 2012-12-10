@@ -35,7 +35,8 @@ class FullPipeline(Pipeline):
             location and overall velocity of the hand.
     """
 
-    def __init__(self, face_cascade_name, hand_cascade_name,
+    def __init__(self, face_cascade_name=FACE_CASCADE_NAME,
+                 hand_cascade_name=HAND_CASCADE_NAME,
                  haarScaleFactor=1.1, haarMinNeighbors=60,
                  window_width=100, window_height=180,
                  nframes=20, directionScale=0.1):
@@ -64,7 +65,7 @@ class FullPipeline(Pipeline):
                                        scaleFactor=self.haarScaleFactor,
                                        minNeighbors=self.haarMinNeighbors,
                                        minSize=(25,35))
-        largest = self.hand_cascade.largest(frame1, hands, draw=False)
+        largest = self.hand_cascade.largest(frame1, hands, draw=True)
         mask = largest.mask(frame1)
 
         # Detect motion in the scene
@@ -75,6 +76,31 @@ class FullPipeline(Pipeline):
         correction.draw(frame_out, detect.Color.BLUE)
         return direction, frame_out
 
+class SimplePipeline(Pipeline):
+    """
+    Simple pipeline that detects hands without preprocessing.
+    """
+
+    def __init__(self, hand_cascade_name=HAND_CASCADE_NAME,
+                 haarScaleFactor=1.1,
+                 haarMinNeighbors=60):
+        self.hand_cascade = detect.CascadeDetector(hand_cascade_name)
+        self.haarScaleFactor = haarScaleFactor
+        self.haarMinNeighbors = haarMinNeighbors
+        self.optical = detect.LKOpticalFlow()
+
+    def detect(self, frame1, frame2):
+        # Detect hands in the scene with no faces
+        hands = self.hand_cascade.find(frame1,
+                                       scaleFactor=self.haarScaleFactor,
+                                       minNeighbors=self.haarMinNeighbors,
+                                       minSize=(25,35))
+        largest = self.hand_cascade.largest(frame1, hands, draw=True)
+        mask = largest.mask(frame1)
+
+        # Detect motion in the scene
+        return self.optical.direction(frame1, frame2, mask=mask)
+
 def main():
     # Read video stream from webcam
     capture = cv2.VideoCapture(0)
@@ -84,10 +110,10 @@ def main():
     capture.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
     capture.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
 
-    pipeline = FullPipeline(FACE_CASCADE_NAME, HAND_CASCADE_NAME,
-                            haarScaleFactor=1.1, haarMinNeighbors=60,
-                            window_width=100, window_height=180,
-                            nframes=20, directionScale=0.1)
+    pipeline = FullPipeline()
+    """
+    pipeline = SimplePipeline()
+    """
 
     while True:
         retval1, frame1 = capture.read()
