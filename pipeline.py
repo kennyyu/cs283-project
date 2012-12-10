@@ -1,3 +1,4 @@
+import argparse
 import cv2
 import detect
 import numpy as np
@@ -101,7 +102,7 @@ class SimplePipeline(Pipeline):
         # Detect motion in the scene
         return self.optical.direction(frame1, frame2, mask=mask)
 
-def main():
+def main(pipeline_type, **kwargs):
     # Read video stream from webcam
     capture = cv2.VideoCapture(0)
     if not capture.isOpened():
@@ -110,10 +111,19 @@ def main():
     capture.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
     capture.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
 
-    pipeline = FullPipeline()
-    """
-    pipeline = SimplePipeline()
-    """
+    # Create pipeline with command line options
+    pipeline = None
+    if pipeline_type == "full":
+        pipeline = FullPipeline(**kwargs)
+    elif pipeline_type == "simple":
+        del kwargs["face_cascade_name"]
+        del kwargs["window_width"]
+        del kwargs["window_height"]
+        del kwargs["nframes"]
+        del kwargs["directionScale"]
+        pipeline = SimplePipeline(**kwargs)
+    else:
+        raise Exception("unknown pipeline type")
 
     while True:
         retval1, frame1 = capture.read()
@@ -137,4 +147,30 @@ def main():
             break
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Optical Flow on Hand Detection")
+    parser.add_argument("-p", "--pipeline", type=str, choices=["full", "simple"],
+                        default="full", dest="pipeline_type",
+                        help="type of pipeline to run")
+    parser.add_argument("--face_cascade", type=str, default=FACE_CASCADE_NAME,
+                        dest="face_cascade_name", help="face cascade file name")
+    parser.add_argument("--hand_cascade", type=str, default=HAND_CASCADE_NAME,
+                        dest="hand_cascade_name", help="hand cascade file name")
+    parser.add_argument("--haarScaleFactor", type=float, default=1.1,
+                        dest="haarScaleFactor",
+                        help="haar scale factor for hand detection")
+    parser.add_argument("--haarMinNeighbors", type=int, default=60,
+                        dest="haarMinNeighbors",
+                        help="haar min neighbors for hand detection")
+    parser.add_argument("--window_width", type=int, default=100,
+                        dest="window_width",
+                        help="width of search window for simple kalman")
+    parser.add_argument("--window_height", type=int, default=180,
+                        dest="window_height",
+                        help="height of search window for simple kalman")
+    parser.add_argument("--nframes", type=int, default=20, dest="nframes",
+                        help="number of frames to preserve for bg subtraction")
+    parser.add_argument("--directionScale", type=float, default=0.1,
+                        dest="directionScale",
+                        help="scale factor for overall direction, used in kalman")
+    args = parser.parse_args()
+    main(**vars(args))
