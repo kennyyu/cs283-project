@@ -160,12 +160,12 @@ class LKOpticalFlow(object):
     Lucas-Kanade.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, min_threshold=5, max_threshold=50):
+        self.min_threshold = min_threshold
+        self.max_threshold = max_threshold
 
     def direction(self, frame_prev, frame_next, maxCorners=100,
                   qualityLevel=0.01, minDistance=0.01, mask=None,
-                  min_threshold=3, max_threshold=50,
                   color_prev=Color.RED, color_next=Color.GREEN):
         """
         Uses Lucas-Kanade to find corresponding points in the second frame
@@ -200,7 +200,7 @@ class LKOpticalFlow(object):
                 newpt = (features_next[i][0][0], features_next[i][0][1])
 
                 # Threshold distances to avoid small and big movements
-                if min_threshold < VMath.dist(oldpt, newpt) < max_threshold:
+                if self.min_threshold < VMath.dist(oldpt, newpt) < self.max_threshold:
                     cv2.circle(frame_prev, newpt, 2, color_next)
                     cv2.line(frame_prev, oldpt, newpt, color_next)
                     direction = VMath.add(direction, VMath.subtract(newpt, oldpt))
@@ -218,14 +218,16 @@ class BGSubtractor(object):
     of frames seen so far.
     """
 
-    def __init__(self, nframes):
+    def __init__(self, nframes, threshold=20, ksize=(15,15)):
         """
         Constructor. nframes is the number of frames to keep in the history.
         """
         self.nframes = nframes
+        self.threshold = threshold
+        self.ksize = ksize
         self.frames = []
 
-    def bgremove(self, frame, threshold=20, ksize=(15,15)):
+    def bgremove(self, frame):
         """
         Removes the background of the frame, using thresholding the difference with
         the provided the threshold. If fewer than nframes have been seen, the frame
@@ -243,8 +245,8 @@ class BGSubtractor(object):
 
         # Subtract the current frame and the oldest frame
         difference = cv2.absdiff(frame, original)
-        _, difference = cv2.threshold(difference, threshold, 255, cv2.THRESH_BINARY)
-        difference = cv2.GaussianBlur(difference, ksize, 1)
+        _, difference = cv2.threshold(difference, self.threshold, 255, cv2.THRESH_BINARY)
+        difference = cv2.GaussianBlur(difference, self.ksize, 1)
         gray = bgr2gray(difference)
         indices = gray.nonzero()
 
