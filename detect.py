@@ -70,8 +70,10 @@ class Rect(object):
     def filter(self, frame):
         mask = np.zeros(shape=(frame.shape[0], frame.shape[1]),
                         dtype=np.dtype("uint8"))
-        (u, v) = np.ix_(range(self.y, min(self.y + self.height, frame.shape[0])),
-                        range(self.x, min(self.x + self.width, frame.shape[1])))
+        (u, v) = np.ix_(range(max(0, self.y),
+                              min(self.y + self.height, frame.shape[0])),
+                        range(max(0, self.x),
+                              min(self.x + self.width, frame.shape[1])))
         indices = (u.astype(int), v.astype(int))
         result = np.zeros(frame.shape, dtype=frame.dtype)
         result[indices] = frame[indices]
@@ -258,7 +260,7 @@ class Kalman(object):
     OpenCV 2.4.3. is lacking python bindings for this.
     """
 
-    def __init__(self, n, m, l, p_sigma=1e-1, q_sigma=1e-5, r_sigma=1):
+    def __init__(self, n, m, l, p_sigma=.1, q_sigma=1e-4, r_sigma=1e-1):
         """
         Params:
             n: dimension of our state (dynamic)
@@ -301,22 +303,33 @@ class Kalman(object):
 
     def predict(self, u=np.zeros((0,0))):
         """ Returns prior estimation of z. """
+        
         u = u if u.shape == (self.l, 1) else np.zeros((self.l, 1))
         self.x = np.dot(self.A, self.x) + np.dot(self.B, u)
         self.P = np.dot(np.dot(self.A, self.P), self.A.T) + self.Q
+        """
+        self.x = np.dot(self.A, self.x)
+        """
         return self.generate()
 
     def correct(self, z):
         """ Returns posterior estimation of z. """
+        
         K = np.dot(np.dot(self.P, self.H.T),
                    np.dot(np.dot(self.H, self.P), self.H.T) + self.R)
         self.x = self.x + np.dot(K, z - np.dot(self.H, self.x))
         self.P = np.dot(np.identity(self.n) - np.dot(K, self.H), self.P)
+        """
+        self.x = np.dot(self.H, z)
+        """
         return self.generate()
 
     def generate(self):
         """ Generates an estimation of z. """
+        
         v = np.random.normal(0, np.linalg.norm(self.R), self.m)
         return np.dot(self.H, self.x) + v.T
-
+        """
+        return self.x
+        """
 

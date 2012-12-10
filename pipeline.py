@@ -1,5 +1,6 @@
 import cv2
 import detect
+import numpy as np
 
 FACE_CASCADE_NAME = "/usr/local/share/OpenCV/haarcascades/haarcascade_frontalface_alt.xml";
 HAND_CASCADE_NAME = "hand_front.xml"
@@ -23,6 +24,18 @@ def main():
     optical = detect.LKOpticalFlow()
     subtractor = detect.BGSubtractor(10)
 
+    # Measure position and velocity in Kalman
+    kalman = detect.Kalman(4, 4, 0)
+    A = np.asarray([[1, 0, 1, 0],
+                    [0, 1, 0, 1],
+                    [0, 0, 1, 0],
+                    [0, 0, 0, 1]])
+    H = np.identity(4)
+    x = np.asarray([FRAME_WIDTH / 2, FRAME_HEIGHT / 2, 0, 0]).T
+    kalman.init(A=A, x=x, H=H)
+    window = 150
+    search_box = detect.Rect(0, 0, FRAME_WIDTH, FRAME_HEIGHT)
+
     while True:
         retval1, frame1 = capture.read()
         retval2, frame2 = capture.read()
@@ -41,15 +54,41 @@ def main():
         # Remove background
         foreground = subtractor.bgremove(no_faces)
 
+        # Look at the window provided by Kalman prediction
+        #[x, y, vx, vy] = kalman.predict()[0][:4]
+        #print [x, y, vx, vy]
+        #prediction = detect.Rect(x - window / 2, y - window / 2, window, window)
+        #search_box = prediction.filter(foreground)
+        #print(prediction)
+        search_filtered = search_box.filter(foreground)
+
         # Detect hands in the scene with no faces
-        hands = hand_cascade.find(foreground, scaleFactor=3, minNeighbors=15,
+        hands = hand_cascade.find(search_filtered, scaleFactor=3, minNeighbors=30,
                                   minSize=(25,35))
-        frame1 = foreground
+        frame1 = search_filtered
         largest = hand_cascade.largest(frame1, hands)
         mask = largest.mask(frame1)
 
         # Detect motion in the scene
         direction, frame_out = optical.direction(frame1, frame2, mask=mask)
+
+        # Update Kalman
+        #if largest.width == 0 and largest.height == 0:
+        #    largest = detect.Rect(FRAME_WIDTH / 2, FRAME_HEIGHT / 2, 0, 0)
+        #hand_center = largest.center()
+        #z = np.asarray([hand_center[0], hand_center[1],
+        #                direction[0] / 0.3, direction[1] / 0.3])
+        #print z
+        #kalman.correct(z)
+        #prediction.draw(frame_out, detect.Color.BLUE)
+        if largest.width == 0 and largest.height == 0:
+            search_box = detect.Rect(0, 0, FRAME_WIDTH, FRAME_HEIGHT)
+        else:
+            search_box = detect.Rect(largest.x + direction[0] - window / 2,
+                                     largest.y + direction[1] - window / 2,
+                                     window, window)
+        search_box.draw(frame_out, detect.Color.BLUE)
+
         cv2.imshow(WINDOW_NAME, frame_out)
 
         # Handlers for key presses
