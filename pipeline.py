@@ -36,6 +36,8 @@ def main():
     window = 120
     search_box = detect.Rect(0, 0, FRAME_WIDTH, FRAME_HEIGHT)
 
+    simple = detect.SimpleKalman(FRAME_WIDTH, FRAME_HEIGHT, 120, 120, scale=0.1)
+
     while True:
         retval1, frame1 = capture.read()
         retval2, frame2 = capture.read()
@@ -55,7 +57,8 @@ def main():
         foreground = subtractor.bgremove(no_faces)
 
         # Look at the window provided by Kalman prediction
-        search_filtered = search_box.filter(foreground)
+        #search_filtered = search_box.filter(foreground)
+        search_filtered = simple.predict().filter(foreground)
 
         # Detect hands in the scene with no faces
         hands = hand_cascade.find(search_filtered, scaleFactor=1.1, minNeighbors=60,
@@ -67,6 +70,7 @@ def main():
         direction, frame_out = optical.direction(frame1, frame2, mask=mask)
 
         # Update Kalman
+        """
         if largest.width == 0 and largest.height == 0:
             search_box = detect.Rect(0, 0, FRAME_WIDTH, FRAME_HEIGHT)
         else:
@@ -74,7 +78,11 @@ def main():
                                      largest.y + largest.height / 2 + direction[1] * 0.1 - window / 2,
                                      window, window)
         search_box.draw(frame_out, detect.Color.BLUE)
+        """
+        correction = simple.correct(largest, direction)
+        correction.draw(frame_out, detect.Color.BLUE)
 
+        # Display the annotated image
         cv2.imshow(WINDOW_NAME, frame_out)
 
         # Handlers for key presses

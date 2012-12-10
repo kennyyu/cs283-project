@@ -303,33 +303,52 @@ class Kalman(object):
 
     def predict(self, u=np.zeros((0,0))):
         """ Returns prior estimation of z. """
-        
         u = u if u.shape == (self.l, 1) else np.zeros((self.l, 1))
         self.x = np.dot(self.A, self.x) + np.dot(self.B, u)
         self.P = np.dot(np.dot(self.A, self.P), self.A.T) + self.Q
-        """
-        self.x = np.dot(self.A, self.x)
-        """
         return self.generate()
 
     def correct(self, z):
         """ Returns posterior estimation of z. """
-        
         K = np.dot(np.dot(self.P, self.H.T),
                    np.dot(np.dot(self.H, self.P), self.H.T) + self.R)
         self.x = self.x + np.dot(K, z - np.dot(self.H, self.x))
         self.P = np.dot(np.identity(self.n) - np.dot(K, self.H), self.P)
-        """
-        self.x = np.dot(self.H, z)
-        """
         return self.generate()
 
     def generate(self):
         """ Generates an estimation of z. """
-        
         v = np.random.normal(0, np.linalg.norm(self.R), self.m)
         return np.dot(self.H, self.x) + v.T
-        """
-        return self.x
-        """
 
+class SimpleKalman(object):
+    """
+    Simple Kalman-like filter that keeps track of the current location of the
+    object and updates, using the measured location and direction.
+    """
+
+    def __init__(self, width, height, window_width, window_height, scale=0.1):
+        self.width = width
+        self.height = height
+        self.window_width = window_width
+        self.window_height = window_height
+        self.scale = scale
+        self.box = Rect(0, 0, self.width, self.height)
+
+    def predict(self):
+        """
+        Return the prediction of the bounding box of the object.
+        """
+        return self.box
+
+    def correct(self, actual, direction):
+        """
+        Corrects our prediction using the measured position and velocity.
+        """
+        if actual.width == 0 and actual.height == 0:
+            self.box = Rect(0, 0, self.width, self.height)
+        else:
+            self.box = Rect(actual.x + actual.width / 2 + direction[0] * self.scale - self.window_width / 2,
+                            actual.y + actual.height / 2 + direction[1] * self.scale - self.window_height / 2,
+                            self.window_width, self.window_height)
+        return self.box
