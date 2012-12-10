@@ -14,48 +14,42 @@ QUIT_KEY = 'c'
 class Pipeline(object):
     """ Abstract Class for pipelines. """
 
-    """
-    Command line arguments for our pipelines
-    """
+    """ Command line arguments for our pipelines """
     parser = argparse.ArgumentParser(description="Optical Flow on Hand Detection")
-    parser.add_argument("-pl", "--pipeline", type=str, choices=["full", "simple"],
-                        default="full", dest="pipeline_type",
-                        help="type of pipeline to run")
-    parser.add_argument("--face_cascade", type=str, default=FACE_CASCADE_NAME,
-                        dest="face_cascade_name", help="face cascade file name")
-    parser.add_argument("--hand_cascade", type=str, default=HAND_CASCADE_NAME,
-                        dest="hand_cascade_name", help="hand cascade file name")
-    parser.add_argument("--haarScaleFactor", type=float, default=1.1,
-                        dest="haarScaleFactor",
+    parser.add_argument("-pl", "--pipeline", type=str, default="full",
+                        choices=["full", "simple", "face"],
+                        dest="pipeline_type", help="type of pipeline to run")
+    parser.add_argument("--face_cascade", type=str, dest="face_cascade_name",
+                        help="face cascade file name")
+    parser.add_argument("--hand_cascade", type=str, dest="hand_cascade_name",
+                        help="hand cascade file name")
+    parser.add_argument("--haarScaleFactor", type=float, dest="haarScaleFactor",
                         help="haar scale factor for hand detection")
-    parser.add_argument("--haarMinNeighbors", type=int, default=60,
-                        dest="haarMinNeighbors",
+    parser.add_argument("--haarMinNeighbors", type=int, dest="haarMinNeighbors",
                         help="haar min neighbors for hand detection")
-    parser.add_argument("--window_width", type=int, default=100,
-                        dest="window_width",
+    parser.add_argument("--window_width", type=int,  dest="window_width",
                         help="width of search window for simple kalman")
-    parser.add_argument("--window_height", type=int, default=180,
-                        dest="window_height",
+    parser.add_argument("--window_height", type=int, dest="window_height",
                         help="height of search window for simple kalman")
-    parser.add_argument("--nframes", type=int, default=20, dest="nframes",
+    parser.add_argument("--nframes", type=int, dest="nframes",
                         help="number of frames to preserve for bg subtraction")
-    parser.add_argument("--directionScale", type=float, default=0.1,
-                        dest="directionScale",
+    parser.add_argument("--directionScale", type=float, dest="directionScale",
                         help="scale factor for overall direction, used in kalman")
 
     @staticmethod
     def create(pipeline_type, **kwargs):
-        if pipeline_type == "full":
-            return FullPipeline(**kwargs)
-        elif pipeline_type == "simple":
-            del kwargs["face_cascade_name"]
-            del kwargs["window_width"]
-            del kwargs["window_height"]
-            del kwargs["nframes"]
-            del kwargs["directionScale"]
-            return SimplePipeline(**kwargs)
-        else:
-            raise Exception("unknown pipeline type")
+        # Filter out kwargs
+        newkwargs = {}
+        for key in kwargs:
+            if kwargs[key] is not None:
+                newkwargs[key] = kwargs[key]
+
+        # Equivalent to a switch statement
+        return {
+            "full" : FullPipeline(**newkwargs),
+            "simple" : SimplePipeline(**newkwargs),
+            "face" : FacePipeline(**newkwargs),
+        }[pipeline_type]
 
     def detect(self, frame1, frame2):
         """
@@ -143,6 +137,22 @@ class SimplePipeline(Pipeline):
         mask = largest.mask(frame1)
 
         # Detect motion in the scene
+        return self.optical.direction(frame1, frame2, mask=mask)
+
+class FacePipeline(Pipeline):
+    """
+    Simple pipeline for face detection.
+    """
+
+    def __init__(self, face_cascade_name=FACE_CASCADE_NAME):
+        self.face_cascade = detect.CascadeDetector(face_cascade_name)
+        self.optical = detect.LKOpticalFlow()
+
+    def detect(self, frame1, frame2):
+        faces = self.face_cascade.find(frame1, scaleFactor=1.1, minNeighbors=2,
+                                       minSize=(30,30))
+        largest = self.face_cascade.largest(frame1, faces, draw=True)
+        mask = largest.mask(frame1)
         return self.optical.direction(frame1, frame2, mask=mask)
 
 def main(**kwargs):
