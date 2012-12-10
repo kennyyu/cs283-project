@@ -43,6 +43,20 @@ class Pipeline(object):
                         dest="directionScale",
                         help="scale factor for overall direction, used in kalman")
 
+    @staticmethod
+    def create(pipeline_type, **kwargs):
+        if pipeline_type == "full":
+            return FullPipeline(**kwargs)
+        elif pipeline_type == "simple":
+            del kwargs["face_cascade_name"]
+            del kwargs["window_width"]
+            del kwargs["window_height"]
+            del kwargs["nframes"]
+            del kwargs["directionScale"]
+            return SimplePipeline(**kwargs)
+        else:
+            raise Exception("unknown pipeline type")
+
     def detect(self, frame1, frame2):
         """
         All implementing classes must implement this method. Returns frame1,
@@ -131,7 +145,7 @@ class SimplePipeline(Pipeline):
         # Detect motion in the scene
         return self.optical.direction(frame1, frame2, mask=mask)
 
-def main(pipeline_type, **kwargs):
+def main(**kwargs):
     # Read video stream from webcam
     capture = cv2.VideoCapture(0)
     if not capture.isOpened():
@@ -140,19 +154,8 @@ def main(pipeline_type, **kwargs):
     capture.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
     capture.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
 
-    # Create pipeline with command line options
-    pipeline = None
-    if pipeline_type == "full":
-        pipeline = FullPipeline(**kwargs)
-    elif pipeline_type == "simple":
-        del kwargs["face_cascade_name"]
-        del kwargs["window_width"]
-        del kwargs["window_height"]
-        del kwargs["nframes"]
-        del kwargs["directionScale"]
-        pipeline = SimplePipeline(**kwargs)
-    else:
-        raise Exception("unknown pipeline type")
+    # Create pipeline from command line arguments
+    pipeline = Pipeline.create(**kwargs)
 
     while True:
         retval1, frame1 = capture.read()
