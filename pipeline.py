@@ -19,9 +19,9 @@ class Pipeline(object):
     parser.add_argument("-pl", "--pipeline", type=str, default="full",
                         choices=["full", "simple", "face", "noface", "nofacekalman"],
                         dest="pipeline_type", help="type of pipeline to run")
-    parser.add_argument("--face_cascade", type=str, dest="face_cascade_name",
+    parser.add_argument("--face_cascade_name", type=str, dest="face_cascade_name",
                         help="face cascade file name")
-    parser.add_argument("--hand_cascade", type=str, dest="hand_cascade_name",
+    parser.add_argument("--hand_cascade_name", type=str, dest="hand_cascade_name",
                         help="hand cascade file name")
     parser.add_argument("--haarScaleFactor", type=float, dest="haarScaleFactor",
                         help="haar scale factor for hand detection")
@@ -46,18 +46,24 @@ class Pipeline(object):
     def create(pipeline_type, **kwargs):
         # Filter out kwargs
         newkwargs = {}
+        print(kwargs)
+        print pipeline_type
         for key in kwargs:
             if kwargs[key] is not None:
                 newkwargs[key] = kwargs[key]
 
-        # Equivalent to a switch statement
-        return {
-            "full" : FullPipeline(**newkwargs),
-            "simple" : SimplePipeline(**newkwargs),
-            "face" : FacePipeline(**newkwargs),
-            "noface" : NoFacePipeline(**newkwargs),
-            "nofacekalman" : NoFaceKalmanPipeline(**newkwargs),
-        }[pipeline_type]
+        if pipeline_type == "full":
+            return FullPipeline(**newkwargs)
+        elif pipeline_type == "simple":
+            return SimplePipeline(**newkwargs)
+        elif pipeline_type == "face":
+            return FacePipeline(**newkwargs)
+        elif pipeline_type == "noface":
+            return NoFacePipeline(**newkwargs)
+        elif pipeline_type == "nofacekalman":
+            return NoFaceKalmanPipeline(**newkwargs)
+        else:
+            raise Exception("unsupported option: " + pipeline_type)
 
     def detect(self, frame1, frame2):
         """
