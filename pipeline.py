@@ -22,7 +22,7 @@ def main():
     face_cascade = detect.CascadeDetector(FACE_CASCADE_NAME)
     hand_cascade = detect.CascadeDetector(HAND_CASCADE_NAME)
     optical = detect.LKOpticalFlow()
-    subtractor = detect.BGSubtractor(10)
+    subtractor = detect.BGSubtractor(20)
 
     # Measure position and velocity in Kalman
     kalman = detect.Kalman(4, 4, 0)
@@ -33,7 +33,7 @@ def main():
     H = np.identity(4)
     x = np.asarray([FRAME_WIDTH / 2, FRAME_HEIGHT / 2, 0, 0]).T
     kalman.init(A=A, x=x, H=H)
-    window = 150
+    window = 120
     search_box = detect.Rect(0, 0, FRAME_WIDTH, FRAME_HEIGHT)
 
     while True:
@@ -60,12 +60,12 @@ def main():
         #prediction = detect.Rect(x - window / 2, y - window / 2, window, window)
         #search_box = prediction.filter(foreground)
         #print(prediction)
-        search_filtered = search_box.filter(no_faces)
+        search_filtered = search_box.filter(foreground)
 
         # Detect hands in the scene with no faces
-        hands = hand_cascade.find(search_filtered, scaleFactor=3, minNeighbors=10,
+        hands = hand_cascade.find(search_filtered, scaleFactor=1.1, minNeighbors=5,
                                   minSize=(25,35))
-        largest = hand_cascade.largest(frame1, hands)
+        largest = hand_cascade.largest(frame1, hands, draw=False)
         mask = largest.mask(frame1)
 
         # Detect motion in the scene
@@ -83,8 +83,8 @@ def main():
         if largest.width == 0 and largest.height == 0:
             search_box = detect.Rect(0, 0, FRAME_WIDTH, FRAME_HEIGHT)
         else:
-            search_box = detect.Rect(largest.x + direction[0] * 0.2 - window / 2,
-                                     largest.y + direction[1] * 0.2 - window / 2,
+            search_box = detect.Rect(largest.x + largest.width / 2 + direction[0] * 0.1 - window / 2,
+                                     largest.y + largest.height / 2 + direction[1] * 0.1 - window / 2,
                                      window, window)
         search_box.draw(frame_out, detect.Color.BLUE)
 
