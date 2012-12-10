@@ -60,12 +60,11 @@ def main():
         #prediction = detect.Rect(x - window / 2, y - window / 2, window, window)
         #search_box = prediction.filter(foreground)
         #print(prediction)
-        search_filtered = search_box.filter(foreground)
+        search_filtered = search_box.filter(no_faces)
 
         # Detect hands in the scene with no faces
-        hands = hand_cascade.find(search_filtered, scaleFactor=3, minNeighbors=30,
+        hands = hand_cascade.find(search_filtered, scaleFactor=3, minNeighbors=10,
                                   minSize=(25,35))
-        frame1 = search_filtered
         largest = hand_cascade.largest(frame1, hands)
         mask = largest.mask(frame1)
 
@@ -84,8 +83,8 @@ def main():
         if largest.width == 0 and largest.height == 0:
             search_box = detect.Rect(0, 0, FRAME_WIDTH, FRAME_HEIGHT)
         else:
-            search_box = detect.Rect(largest.x + direction[0] - window / 2,
-                                     largest.y + direction[1] - window / 2,
+            search_box = detect.Rect(largest.x + direction[0] * 0.2 - window / 2,
+                                     largest.y + direction[1] * 0.2 - window / 2,
                                      window, window)
         search_box.draw(frame_out, detect.Color.BLUE)
 
