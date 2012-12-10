@@ -46,8 +46,6 @@ class Pipeline(object):
     def create(pipeline_type, **kwargs):
         # Filter out kwargs
         newkwargs = {}
-        print(kwargs)
-        print pipeline_type
         for key in kwargs:
             if kwargs[key] is not None:
                 newkwargs[key] = kwargs[key]
