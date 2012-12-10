@@ -3,8 +3,8 @@ import cv2
 import detect
 import numpy as np
 
-FACE_CASCADE_NAME = "/usr/local/share/OpenCV/haarcascades/haarcascade_frontalface_alt.xml";
-HAND_CASCADE_NAME = "hand_front.xml"
+FACE_CASCADE_NAME = "cascades/haarcascade_frontalface_alt.xml";
+HAND_CASCADE_NAME = "cascades/hand_front.xml"
 WINDOW_NAME = "Pipeline"
 FRAME_WIDTH = 320
 FRAME_HEIGHT = 240
