@@ -16,3 +16,5 @@ Dependencies
 * OpenCV 2.4.3
 * Tornado (Python) 2.4.1
 * Python 2.7
+* Websockets
+* Chrome
