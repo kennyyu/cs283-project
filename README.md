@@ -47,18 +47,18 @@ To see more flags, use the `-h` flag:
 
 ## Running the Maps Application
 
-To run the server, you must install Tornado (Python) 2.4.1. To start the server, specify the port (default is 88888):
+To run the server, you must install Tornado (Python) 2.4.1. To start the server, specify the port (default is 8888):
 
-    python server.py --port=80
+    python server.py --port=8888
 
 `server.py` accepts the same command line arguments as `pipeline.py`. To open the client on the server, edit `static/settings.js` to match the port specified on the server. `static/settings.js` should look like this:
 
     MotionApp = {
         HOST: "localhost",
-        PORT: 80,
+        PORT: 8888,
         WIDTH: 320,
         HEIGHT: 240,
         SCALE_FACTOR: 0.5,
     };
 
-Then visit `localhost:80` in Chrome (you must be using the latest version of Chrome and have Websockets enabled, see `chrome://flags`). To scroll around, face the palm of your hand, fingers together, towards the camera, and move your hand around!
+Then visit `localhost:8888` in Chrome (you must be using the latest version of Chrome and have Websockets enabled, see `chrome://flags`). To scroll around, face the palm of your hand, fingers together, towards the camera, and move your hand around!
