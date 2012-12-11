@@ -17,7 +17,7 @@ class Pipeline(object):
     """ Command line arguments for our pipelines """
     parser = argparse.ArgumentParser(description="Optical Flow on Hand Detection")
     parser.add_argument("-pl", "--pipeline", type=str, default="full",
-                        choices=["full", "simple", "face", "noface", "nofacekalman"],
+                        choices=["full", "simple", "face", "noface", "nofacekalman", "screenshot"],
                         dest="pipeline_type", help="type of pipeline to run")
     parser.add_argument("--face_cascade_name", type=str, dest="face_cascade_name",
                         help="face cascade file name")
@@ -60,6 +60,8 @@ class Pipeline(object):
             return NoFacePipeline(**newkwargs)
         elif pipeline_type == "nofacekalman":
             return NoFaceKalmanPipeline(**newkwargs)
+        elif pipeline_type == "screenshot":
+            return FullScreenshotPipeline(**newkwargs)
         else:
             raise Exception("unsupported option: " + pipeline_type)
 
@@ -243,6 +245,66 @@ class FacePipeline(Pipeline):
         largest = self.face_cascade.largest(frame1, faces, draw=True)
         mask = largest.mask(frame1)
         return self.optical.direction(frame1, frame2, mask=mask)
+
+class FullScreenshotPipeline(Pipeline):
+    """
+    Includes the full pipeline and creates different windows to see intermediate results.
+    """
+
+    def __init__(self, face_cascade_name=FACE_CASCADE_NAME,
+                 hand_cascade_name=HAND_CASCADE_NAME,
+                 haarScaleFactor=1.1, haarMinNeighbors=60,
+                 minDistThreshold=5, maxDistThreshold=50,
+                 window_width=100, window_height=180,
+                 threshold=20, nframes=20, directionScale=0.1):
+        self.face_cascade = detect.CascadeDetector(face_cascade_name)
+        self.hand_cascade = detect.CascadeDetector(hand_cascade_name)
+        self.optical = detect.LKOpticalFlow(min_threshold=minDistThreshold,
+                                            max_threshold=maxDistThreshold)
+        self.subtractor = detect.BGSubtractor(nframes, threshold=threshold)
+        self.kalman = detect.SimpleKalman(FRAME_WIDTH, FRAME_HEIGHT,
+                                          window_width, window_height, scale=directionScale)
+        self.haarScaleFactor = haarScaleFactor
+        self.haarMinNeighbors = haarMinNeighbors
+
+    def detect(self, frame1, frame2):
+        # Show original detection
+        frame1copy = frame1.copy()
+        hands = self.hand_cascade.find(frame1copy,
+                                       scaleFactor=self.haarScaleFactor,
+                                       minNeighbors=self.haarMinNeighbors,
+                                       minSize=(25,35))
+        self.hand_cascade.largest(frame1copy, hands, draw=True)
+        cv2.imshow("Original Detection", frame1copy)
+
+        # Remove faces from the scene
+        faces = self.face_cascade.find(frame1, minNeighbors=2, minSize=(30,30))
+        no_faces = self.face_cascade.remove(frame1, faces)
+        cv2.imshow("Removed Faces", no_faces)
+
+        # Remove background
+        foreground = self.subtractor.bgremove(no_faces)
+        cv2.imshow("Removed Background", foreground)
+
+        # Look at the window provided by Kalman prediction
+        search_filtered = self.kalman.predict().filter(foreground)
+        cv2.imshow("Kalman Filter", search_filtered)
+
+        # Detect hands in the scene with no faces
+        hands = self.hand_cascade.find(search_filtered,
+                                       scaleFactor=self.haarScaleFactor,
+                                       minNeighbors=self.haarMinNeighbors,
+                                       minSize=(25,35))
+        largest = self.hand_cascade.largest(frame1, hands, draw=True)
+        mask = largest.mask(frame1)
+
+        # Detect motion in the scene
+        direction, frame_out = self.optical.direction(frame1, frame2, mask=mask)
+
+        # Update Kalman
+        correction = self.kalman.correct(largest, direction)
+        correction.draw(frame_out, detect.Color.BLUE)
+        return direction, frame_out
 
 def main(**kwargs):
     # Read video stream from webcam
