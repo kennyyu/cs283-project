@@ -6,6 +6,7 @@
 *.dvi
 *.svn
 *proposal.out
+*writeup.out
 .cproject
 .pydevproject
 .project
