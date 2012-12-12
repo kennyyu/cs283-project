@@ -57,7 +57,7 @@ class VideoWebSocketHandler(tornado.websocket.WebSocketHandler):
         if self.prev == None:
             self.prev = newim
         else:
-            direction, retim = PIPELINE.detect(self.prev, newim)
+            largest, direction, retim = PIPELINE.detect(self.prev, newim)
             cv2.imwrite(self.file_out, retim)
             self.prev = newim
             file = open(self.file_out, "r")

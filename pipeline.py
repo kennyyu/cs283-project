@@ -17,7 +17,8 @@ class Pipeline(object):
     """ Command line arguments for our pipelines """
     parser = argparse.ArgumentParser(description="Optical Flow on Hand Detection")
     parser.add_argument("-pl", "--pipeline", type=str, default="full",
-                        choices=["full", "simple", "face", "noface", "nofacekalman", "screenshot"],
+                        choices=["full", "simple", "face", "noface", "nofacekalman",
+                                 "screenshot", "kalman", "nobg", "nobgkalman", "nofacenobg"],
                         dest="pipeline_type", help="type of pipeline to run")
     parser.add_argument("--face_cascade_name", type=str, dest="face_cascade_name",
                         help="face cascade file name")
@@ -62,14 +63,22 @@ class Pipeline(object):
             return NoFaceKalmanPipeline(**newkwargs)
         elif pipeline_type == "screenshot":
             return FullScreenshotPipeline(**newkwargs)
+        elif pipeline_type == "kalman":
+            return KalmanPipeline(**newkwargs)
+        elif pipeline_type == "nobg":
+            return NoBgPipeline(**newkwargs)
+        elif pipeline_type == "nobgkalman":
+            return NoBgKalmanPipeline(**newkwargs)
+        elif pipeline_type == "nofacenobg":
+            return NoFaceNoBgPipeline(**newkwargs)
         else:
             raise Exception("unsupported option: " + pipeline_type)
 
     def detect(self, frame1, frame2):
         """
         All implementing classes must implement this method. Returns frame1,
-        annotated with the detected hand and optical flow, and the overall
-        direction of the scene.
+        annotated with the detected hand and optical flow, the overall
+        direction of the scene, and the largest bounding box.
         """
         raise Exception("Must subclass implement")
 
@@ -128,7 +137,149 @@ class FullPipeline(Pipeline):
         # Update Kalman
         correction = self.kalman.correct(largest, direction)
         correction.draw(frame_out, detect.Color.BLUE)
-        return direction, frame_out
+        return largest, direction, frame_out
+
+class KalmanPipeline(Pipeline):
+    """
+    Runs only Kalman.
+    """
+
+    def __init__(self, hand_cascade_name=HAND_CASCADE_NAME,
+                 haarScaleFactor=1.1, haarMinNeighbors=60,
+                 minDistThreshold=5, maxDistThreshold=50,
+                 window_width=100, window_height=180,
+                 directionScale=0.02):
+        self.hand_cascade = detect.CascadeDetector(hand_cascade_name)
+        self.optical = detect.LKOpticalFlow(min_threshold=minDistThreshold,
+                                            max_threshold=maxDistThreshold)
+        self.kalman = detect.SimpleKalman(FRAME_WIDTH, FRAME_HEIGHT,
+                                          window_width, window_height, scale=directionScale)
+        self.haarScaleFactor = haarScaleFactor
+        self.haarMinNeighbors = haarMinNeighbors
+
+    def detect(self, frame1, frame2):
+        # Look at the window provided by Kalman prediction
+        search_filtered = self.kalman.predict().filter(frame1)
+
+        # Detect hands in the scene with no faces
+        hands = self.hand_cascade.find(search_filtered,
+                                       scaleFactor=self.haarScaleFactor,
+                                       minNeighbors=self.haarMinNeighbors,
+                                       minSize=(25,35))
+        largest = self.hand_cascade.largest(frame1, hands, draw=True)
+        mask = largest.mask(frame1)
+
+        # Detect motion in the scene
+        direction, frame_out = self.optical.direction(frame1, frame2, mask=mask)
+
+        # Update Kalman
+        correction = self.kalman.correct(largest, direction)
+        correction.draw(frame_out, detect.Color.BLUE)
+        return largest, direction, frame_out
+
+class NoBgPipeline(Pipeline):
+
+    def __init__(self, hand_cascade_name=HAND_CASCADE_NAME,
+                 haarScaleFactor=1.1, haarMinNeighbors=60,
+                 minDistThreshold=5, maxDistThreshold=50,
+                 threshold=20, nframes=20):
+        self.hand_cascade = detect.CascadeDetector(hand_cascade_name)
+        self.optical = detect.LKOpticalFlow(min_threshold=minDistThreshold,
+                                            max_threshold=maxDistThreshold)
+        self.subtractor = detect.BGSubtractor(nframes, threshold=threshold)
+        self.haarScaleFactor = haarScaleFactor
+        self.haarMinNeighbors = haarMinNeighbors
+
+    def detect(self, frame1, frame2):
+        # Remove background
+        foreground = self.subtractor.bgremove(frame1)
+
+        # Detect hands in the scene with no faces
+        hands = self.hand_cascade.find(foreground,
+                                       scaleFactor=self.haarScaleFactor,
+                                       minNeighbors=self.haarMinNeighbors,
+                                       minSize=(25,35))
+        largest = self.hand_cascade.largest(frame1, hands, draw=True)
+        mask = largest.mask(frame1)
+
+        # Detect motion in the scene
+        direction, frame_out = self.optical.direction(frame1, frame2, mask=mask)
+        return largest, direction, frame_out
+
+class NoFaceNoBgPipeline(Pipeline):
+
+    def __init__(self, face_cascade_name=FACE_CASCADE_NAME,
+                 hand_cascade_name=HAND_CASCADE_NAME,
+                 haarScaleFactor=1.1, haarMinNeighbors=60,
+                 minDistThreshold=5, maxDistThreshold=50,
+                 threshold=20, nframes=20):
+        self.face_cascade = detect.CascadeDetector(face_cascade_name)
+        self.hand_cascade = detect.CascadeDetector(hand_cascade_name)
+        self.optical = detect.LKOpticalFlow(min_threshold=minDistThreshold,
+                                            max_threshold=maxDistThreshold)
+        self.subtractor = detect.BGSubtractor(nframes, threshold=threshold)
+        self.haarScaleFactor = haarScaleFactor
+        self.haarMinNeighbors = haarMinNeighbors
+
+    def detect(self, frame1, frame2):
+        # Remove faces from the scene
+        faces = self.face_cascade.find(frame1, minNeighbors=2, minSize=(30,30))
+        no_faces = self.face_cascade.remove(frame1, faces)
+
+        # Remove background
+        foreground = self.subtractor.bgremove(no_faces)
+
+        # Detect hands in the scene with no faces
+        hands = self.hand_cascade.find(foreground,
+                                       scaleFactor=self.haarScaleFactor,
+                                       minNeighbors=self.haarMinNeighbors,
+                                       minSize=(25,35))
+        largest = self.hand_cascade.largest(frame1, hands, draw=True)
+        mask = largest.mask(frame1)
+
+        # Detect motion in the scene
+        direction, frame_out = self.optical.direction(frame1, frame2, mask=mask)
+        return largest, direction, frame_out
+
+class NoBgKalmanPipeline(Pipeline):
+
+    def __init__(self, hand_cascade_name=HAND_CASCADE_NAME,
+                 haarScaleFactor=1.1, haarMinNeighbors=60,
+                 minDistThreshold=5, maxDistThreshold=50,
+                 threshold=20, nframes=20,
+                 window_width=100, window_height=180,
+                 directionScale=0.02):
+        self.hand_cascade = detect.CascadeDetector(hand_cascade_name)
+        self.optical = detect.LKOpticalFlow(min_threshold=minDistThreshold,
+                                            max_threshold=maxDistThreshold)
+        self.subtractor = detect.BGSubtractor(nframes, threshold=threshold)
+        self.kalman = detect.SimpleKalman(FRAME_WIDTH, FRAME_HEIGHT,
+                                          window_width, window_height, scale=directionScale)
+        self.haarScaleFactor = haarScaleFactor
+        self.haarMinNeighbors = haarMinNeighbors
+
+    def detect(self, frame1, frame2):
+        # Remove background
+        foreground = self.subtractor.bgremove(frame1)
+
+        # Look at the window provided by Kalman prediction
+        search_filtered = self.kalman.predict().filter(foreground)
+
+        # Detect hands in the scene with no faces
+        hands = self.hand_cascade.find(search_filtered,
+                                       scaleFactor=self.haarScaleFactor,
+                                       minNeighbors=self.haarMinNeighbors,
+                                       minSize=(25,35))
+        largest = self.hand_cascade.largest(frame1, hands, draw=True)
+        mask = largest.mask(frame1)
+
+        # Detect motion in the scene
+        direction, frame_out = self.optical.direction(frame1, frame2, mask=mask)
+
+        # Update Kalman
+        correction = self.kalman.correct(largest, direction)
+        correction.draw(frame_out, detect.Color.BLUE)
+        return largest, direction, frame_out
 
 class NoFaceKalmanPipeline(Pipeline):
 
@@ -169,7 +320,7 @@ class NoFaceKalmanPipeline(Pipeline):
         # Update Kalman
         correction = self.kalman.correct(largest, direction)
         correction.draw(frame_out, detect.Color.BLUE)
-        return direction, frame_out
+        return largest, direction, frame_out
 
 class NoFacePipeline(Pipeline):
     """
@@ -200,7 +351,8 @@ class NoFacePipeline(Pipeline):
         mask = largest.mask(frame1)
 
         # Detect motion in the scene
-        return self.optical.direction(frame1, frame2, mask=mask)
+        direction, frame_out = self.optical.direction(frame1, frame2, mask=mask)
+        return largest, direction, frame_out
 
 class SimplePipeline(Pipeline):
     """
@@ -226,7 +378,8 @@ class SimplePipeline(Pipeline):
         mask = largest.mask(frame1)
 
         # Detect motion in the scene
-        return self.optical.direction(frame1, frame2, mask=mask)
+        direction, frame_out = self.optical.direction(frame1, frame2, mask=mask)
+        return largest, direction, frame_out
 
 class FacePipeline(Pipeline):
     """
@@ -244,7 +397,8 @@ class FacePipeline(Pipeline):
                                        minSize=(30,30))
         largest = self.face_cascade.largest(frame1, faces, draw=True)
         mask = largest.mask(frame1)
-        return self.optical.direction(frame1, frame2, mask=mask)
+        direction, frame_out = self.optical.direction(frame1, frame2, mask=mask)
+        return largest, direction, frame_out
 
 class FullScreenshotPipeline(Pipeline):
     """
@@ -322,7 +476,7 @@ class FullScreenshotPipeline(Pipeline):
         # Update Kalman
         correction = self.kalman.correct(largest, direction)
         correction.draw(frame_out, detect.Color.BLUE)
-        return direction, frame_out
+        return largest, direction, frame_out
 
 def main(**kwargs):
     # Read video stream from webcam
@@ -348,7 +502,7 @@ def main(**kwargs):
         frame2 = cv2.flip(frame2, 1)
 
         # Detect hand and direction of the scene
-        direction, frame_out = pipeline.detect(frame1, frame2)
+        largest, direction, frame_out = pipeline.detect(frame1, frame2)
         print(direction)
         cv2.imshow(WINDOW_NAME, frame_out)
 
