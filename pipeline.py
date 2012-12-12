@@ -269,26 +269,44 @@ class FullScreenshotPipeline(Pipeline):
 
     def detect(self, frame1, frame2):
         # Show original detection
-        frame1copy = frame1.copy()
-        hands = self.hand_cascade.find(frame1copy,
+        frame1_copy = frame1.copy()
+        hands = self.hand_cascade.find(frame1_copy,
                                        scaleFactor=self.haarScaleFactor,
                                        minNeighbors=self.haarMinNeighbors,
                                        minSize=(25,35))
-        self.hand_cascade.largest(frame1copy, hands, draw=True)
-        cv2.imshow("Original Detection", frame1copy)
+        self.hand_cascade.largest(frame1_copy, hands, draw=True)
+        cv2.imshow("Original Detection", frame1_copy)
 
         # Remove faces from the scene
         faces = self.face_cascade.find(frame1, minNeighbors=2, minSize=(30,30))
         no_faces = self.face_cascade.remove(frame1, faces)
-        cv2.imshow("Removed Faces", no_faces)
+        hands = self.hand_cascade.find(no_faces,
+                                       scaleFactor=self.haarScaleFactor,
+                                       minNeighbors=self.haarMinNeighbors,
+                                       minSize=(25,35))
+        no_faces_copy = no_faces.copy()
+        self.hand_cascade.largest(no_faces_copy, hands, draw=True)
+        cv2.imshow("Removed Faces", no_faces_copy)
 
         # Remove background
         foreground = self.subtractor.bgremove(no_faces)
-        cv2.imshow("Removed Background", foreground)
+        hands = self.hand_cascade.find(foreground,
+                                       scaleFactor=self.haarScaleFactor,
+                                       minNeighbors=self.haarMinNeighbors,
+                                       minSize=(25,35))
+        foreground_copy = foreground.copy()
+        self.hand_cascade.largest(foreground_copy, hands, draw=True)
+        cv2.imshow("Removed Background", foreground_copy)
 
         # Look at the window provided by Kalman prediction
         search_filtered = self.kalman.predict().filter(foreground)
-        cv2.imshow("Kalman Filter", search_filtered)
+        hands = self.hand_cascade.find(search_filtered,
+                                       scaleFactor=self.haarScaleFactor,
+                                       minNeighbors=self.haarMinNeighbors,
+                                       minSize=(25,35))
+        search_filtered_copy = search_filtered.copy()
+        self.hand_cascade.largest(search_filtered_copy, hands, draw=True)
+        cv2.imshow("Kalman Filter", search_filtered_copy)
 
         # Detect hands in the scene with no faces
         hands = self.hand_cascade.find(search_filtered,
