@@ -8,6 +8,7 @@
 \usepackage{array}     
 \usepackage{hyperref}
 \usepackage{graphicx}
+\usepackage{subfigure}
 \usepackage{fullpage}
 \usepackage{amsmath, amssymb, amsthm}
 \usepackage[framed,numbered,autolinebreaks,useliterate]{mcode}
@@ -48,7 +49,24 @@ What if you had the power of Microsoft's Kinect in your webcam? What if you coul
 \section{Methods}
 
 \subsection{Generating our Hand Detector}
-To generate our hand detector, we took 10 pictures of our right hand using a webcam from a  Macbook Pro 2011 model, and we cropped the images to leave only our hand in the images. Our pictures consisted of our right hand with the palm facing forward and all fingers together. We used the first 100 images from !!!!CITE!!!!! as negatives. We used OpenCV's \texttt{opencv\_createsamples} !!! CITE !!!!! utility to generate 250 50 $\times$ 90 pixel samples from this set of 10 positives and 100 negatives, resulting in images where our positive images have been warped by homographies and placed randomly into our negative images. We used OpenCV's \texttt{opencv\_haartraining} tool to train our Haar cascade classifier, setting our min hit rate to $0.999$, our max false alarm rate to $0.5$ and with 14 stages in our cascade. This took about a day to complete.
+
+\noindent\begin{figure}[H]
+\centering
+\includegraphics[width=50px, height=90px]{../data/positives/img0000.jpg}
+\includegraphics[width=50px, height=90px]{../data/positives/img0001.jpg}
+\includegraphics[width=50px, height=90px]{../data/positives/img0002.jpg}
+\includegraphics[width=50px, height=90px]{../data/positives/img0003.jpg}
+\includegraphics[width=50px, height=90px]{../data/positives/img0004.jpg} \\
+\includegraphics[width=50px, height=90px]{../data/positives/img0005.jpg}
+\includegraphics[width=50px, height=90px]{../data/positives/img0006.jpg}
+\includegraphics[width=50px, height=90px]{../data/positives/img0007.jpg}
+\includegraphics[width=50px, height=90px]{../data/positives/img0008.jpg}
+\includegraphics[width=50px, height=90px]{../data/positives/img0009.jpg}
+\caption{The 10 positive images used to train our hand detector. We generated 250 samples from these, each of size 90 pixels high and 50 pixels wide.}
+\label{traininghands}
+\end{figure}
+
+To generate our hand detector, we took 10 pictures of our right hand using a webcam from a  Macbook Pro 2011 model, and we cropped the images to leave only our hand in the images. Our pictures consisted of our right hand with the palm facing forward and all fingers together. See Figure \ref{traininghands} for the the images we used as positives. We used the first 100 images from !!!!CITE!!!!! as negatives. We used OpenCV's \texttt{opencv\_createsamples} !!! CITE !!!!! utility to generate 250 90 $\times$ 50 pixel samples from this set of 10 positives and 100 negatives, resulting in images where our positive images have been warped by homographies and placed randomly into our negative images. We used OpenCV's \texttt{opencv\_haartraining} tool to train our Haar cascade classifier, setting our min hit rate to $0.999$, our max false alarm rate to $0.5$ and with 14 stages in our cascade. This took about a day to complete.
 
 \subsection{Building the Pipeline}
 
