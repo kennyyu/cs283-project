@@ -37,14 +37,14 @@
 
 \begin{document}
 
-\title{CS 283 Final Project \\ Pipeline for Improving Accuracy of Hand Tracking}
+\title{CS 283 Final Project \\ Pipeline for Improving Accuracy of Hand Tracking with a Poorly Trained Haar Cascade Detector}
 \date{Fall 2012}
 \author{Kenny Yu, HUID: 30798260}
 \maketitle
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Introduction}
-What if you had the power of Microsoft's Kinect in your webcam? What if you could control applications simply with a swipe of your hand? Detecting and tracking hands typically requires a good detector, which requires large amounts of good data (usually at least 5000 images !!!CITE!!!) and a tremendous amount of computation time to train the classifier. In this paper, we trained our hand detector with only 250 images, generated from 10 positives and 100 negatives. Despite this poorly trained Haar cascade classifier, we provide a pipeline to improve accuracy during hand tracking, achieving comparable results to tracking with a well-trained hand detector. Using this pipeline, we create a sample application in which the user can control Google Maps !!!CITE!!! by simply moving one's hand. See our source code in !!!CITE!!! for our pipeline and server to run this application.
+What if you had the power of Microsoft's Kinect in your webcam? What if you could control applications simply with a swipe of your hand? Detecting and tracking hands typically requires a good detector, which requires large amounts of good data (usually at least 5000 images !!!CITE!!!) and a tremendous amount of computation time to train the classifier. In this paper, we trained our hand detector with only 250 images, generated from 10 positives and 100 negatives. Despite this poorly trained Haar cascade classifier, we provide a pipeline to improve accuracy during hand tracking, achieving comparable results to tracking with a well-trained hand detector. Using this pipeline, we create a sample application !!!CITE!!! in which the user can control Google Maps !!!CITE!!! by simply moving one's hand. See our source code in !!!CITE!!! for our pipeline and server to run this application.
 
 \section{Methods}
 
@@ -145,6 +145,15 @@ When there are no detected hands, we set our Kalman prediction to be the entire 
 \end{algorithm}
 
 \subsection{Building the Google Maps Application}
+
+We used our pipeline to create a simple application in which the user can control Google Maps by moving one's hand. We follow the model proposed in !!!CITE!!! to create our application. We used Chrome's WebRTC ability to capture a video stream from a connected webcam. Using web sockets !!!CITE!!!, we send a constant stream of frames to our server that is running our pipeline. We used Tornado 2.4.1 !!!CITE!!! to run our server, and we used OpenCV 2.4.1 !!!CITE!!! to implement our pipeline. The server runs the pipeline and outputs the annotated frame and the overall computed direction of the hand, and the client then uses this information to update the map accordingly. A live running instance of the application can be publicly accessed at \url{http://goo.gl/pcNxG}. See Figure \ref{map} for a screenshot of the application in action. The green vectors represents the direction of the corners, and the white vector is the sum of the green vectors, representing the overall direction of the hand.
+
+\noindent\begin{figure}[H]
+\centering
+\includegraphics[scale=0.45]{map.png}
+\caption{Screenshot of our Google Maps Application in action. The green vectors represents the direction of the corners, and the white vector is the sum of the green vectors, representing the overall direction of the hand.}
+\label{map}
+\end{figure}
 
 \section{Results}
 
