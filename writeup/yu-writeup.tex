@@ -44,11 +44,11 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Introduction}
-What if you had the power of Microsoft's Kinect in your webcam? What if you could control applications simply with a swipe of your hand? Detecting and tracking hands typically requires a good detector, which requires large amounts of good data (usually at least 5000 images !!!CITE!!!) and a tremendous amount of computation time to train the classifier. In this paper, we trained our hand detector with only 250 images, generated from 10 positives and 100 negatives. Despite this poorly trained Haar cascade classifier, we provide a pipeline to improve accuracy during hand tracking, achieving comparable results to tracking with a well-trained hand detector. Using this pipeline, we create a sample application in which the user can control Google Maps !!!CITE!!! by simply moving one's hand.
+What if you had the power of Microsoft's Kinect in your webcam? What if you could control applications simply with a swipe of your hand? Detecting and tracking hands typically requires a good detector, which requires large amounts of good data (usually at least 5000 images !!!CITE!!!) and a tremendous amount of computation time to train the classifier. In this paper, we trained our hand detector with only 250 images, generated from 10 positives and 100 negatives. Despite this poorly trained Haar cascade classifier, we provide a pipeline to improve accuracy during hand tracking, achieving comparable results to tracking with a well-trained hand detector. Using this pipeline, we create a sample application in which the user can control Google Maps !!!CITE!!! by simply moving one's hand. See our source code in !!!CITE!!! for our pipeline and server to run this application.
 
 \section{Methods}
 
-\subsection{Generating our Hand Detector}
+\subsection{Training the Hand Detector}
 To generate our hand detector, we took 10 pictures of our right hand using a webcam from a  Macbook Pro 2011 model, and we cropped the images to leave only our hand in the images. Our pictures consisted of our right hand with the palm facing forward and all fingers together. See Figure \ref{traininghands} for the the images we used as positives. We used the first 100 images from !!!!CITE!!!!! as negatives. We used OpenCV's \texttt{opencv\_createsamples} !!! CITE !!!!! utility to generate 250 90 $\times$ 50 pixel samples from this set of 10 positives and 100 negatives, resulting in images where our positive images have been warped by homographies and placed randomly into our negative images. We used OpenCV's \texttt{opencv\_haartraining} tool to train our Haar cascade classifier, setting our min hit rate to $0.999$, our max false alarm rate to $0.5$, and running 14 stages in our cascade. This took about a day to complete, and the resulting cascade is located in \texttt{cascades/hand\_front.xml}.
 
 \noindent\begin{figure}[H]
@@ -69,11 +69,13 @@ To generate our hand detector, we took 10 pictures of our right hand using a web
 
 \subsection{Building the Pipeline}
 
-For our pipeline, we used a frame size of 320 pixels wide and 240 pixels tall. We ran our detector without any preprocessing, and noted that we had many noisy detections, as shown in Figure \ref{1-original}. The yellow boxes indicate multiple possible detected hands, and the green one represents the largest one in the overall frame. We noted that our detector often mistook faces as hands, probably because of similar color tone. Using this heuristic, we decided to remove faces, and this generally gave us better results, as shown in \ref{2-noface}.
+See \texttt{detect.py} for the different components of our pipeline, and see \texttt{pipeline.py} for the various pipelines. For our pipeline, we used a frame size of 320 pixels wide and 240 pixels tall. We ran our detector without any preprocessing, and noted that we had many noisy detections, as shown in Figure \ref{1-original}. The yellow boxes indicate multiple possible detected hands, and the green one represents the largest one in the overall frame. We noted that our detector often mistook faces as hands, probably because of similar color tone. Using this heuristic, we decided to remove faces, and this generally gave us better results, as shown in \ref{2-noface}. We used OpenCV's frontal face detector in \texttt{cascades/haarcasacade\_frontalface\_alt.xml}, which works very well in practice.
 
-Next, we noted that our detection was sensitive to noisy non-solid backgrounds. To account for this, we implemented background subtraction. To do this, we kept a history of the past $n$ frames, and we took the difference of the current frame and the oldest of the $n$ frames and thresholded the difference. In practice, we found that $n = 20$ worked quite well. See Figure \ref{3-nobg} to see an example of the result of applying background subtraction. Background subtraction, however, had several issues. The dark patches left in the middle of the hand would sometimes prevent valid detections, and the randomly scattered dark patches also led to some false positive detections. 
+Next, we noted that our detection was sensitive to noisy non-solid backgrounds. To account for this, we implemented background subtraction. To do this, we kept a history of the past $n$ frames, and we took the difference of the intensities of each pixel in the current frame and the oldest of the $n$ frames, and thresholded the difference. We found that setting our threshold to $20$ worked best, and we found that the number of frames $n = 20$ worked quite well. See Figure \ref{3-nobg} to see an example of the result of applying background subtraction. Background subtraction, however, had several issues. The dark patches left in the middle of the hand would sometimes prevent valid detections, and the randomly scattered dark patches also led to some false positive detections. 
 
-To fix the latter issue, we used a simplified version of a Kalman Filter !!!! CITE !!!! to predict a bounding box window of where the hand would likely be in the next frame. We defined our state $\m{x_k}$ at step $k$ to be a 4-vector:
+To fix the latter issue, we used a simplified version of a Kalman Filter !!!! CITE !!!! to predict a bounding box window of where the hand would likely be in the next frame. We made the assumption that a hand typically moves in a smooth manner, and so using the velocity and current position of the hand will give us a pretty good prediction for where the hand will be in the next frame. 
+
+We defined our state $\m{x_k}$ at step $k$ to be a 4-vector:
 $$\m{x_k} = \transpose{(x, y, v_x, v_y)},$$
 where $x,y$ is the current position (center) of the hand, and $v_x, v_y$ are the $x$ and $y$ components of the velocity of the hand. From this definition of our state, we naturally defined the next state (prediction) $\m{x_{k+1}}$ to be:
 $$\m{x_{k+1}} = \transpose{(x + v_x, y + v_y, v_x, v_y)},$$
@@ -93,10 +95,10 @@ When we first attempted to use this Kalman filter, we had used error, process no
 In our pipeline, we used our Kalman filter to predict a state $\m{x_{k+1}} = (x,y,v_x,v_y)$, where $(x,y)$ represents our prediction of the center of a $h \times w$ bounding box where we would probably detect our hand. In practice, we discovered that a $h = 180, w = 100$ worked best. Given this window, we applied our hand detector only within this window. See Figure \ref{4-kalman} for the result of this hand detection, and see the blue box in Figure \ref{5-optical} to see the Kalman prediction window relative to the original frame. 
 
 We detected the corners within the detected hand, and then we used Lucas-Kanade !!! CITE !!! to compute the optical flow of these corners. We summed the overall displacements to obtain the overall velocity $(\hat{v_x}, \hat{{v_y}})$. To correct our estimate, we set our corrected state $\m{\hat{x_k}}$ to be:
-$$\m{\hat{x_k}} = \transpose{(\hat{x}, \hat{y}, \hat{v_x}, \hat{v_y})},$$
-where $(\hat{x},\hat{y})$ is the center of the detected hand. We then obtained our prediction $\m{x_{k+1}}$ for the next frame by using our corrected state $\m{\hat{x_k}}$:
+$$\m{\hat{x_k}} = \transpose{(\hat{x}, \hat{y}, c\hat{v_x}, c\hat{v_y})},$$
+where $(\hat{x},\hat{y})$ is the center of the detected hand, and $c$ is constant we chose to scale back the overall direction. If $c$ is too large, then our window will overshoot the position of the hand. If $c$ is too small, then our hand will move past the prediction window and will not be detected. In practice, we discovered that $c = 0.02$ works best. We then obtained our prediction $\m{x_{k+1}}$ for the next frame by using our corrected state $\m{\hat{x_k}}$:
 $$\m{x_{k+1}} = \m{A} \m{\hat{x_k}}.$$
-When there are no detected hands, we set our Kalman prediction to be the entire original frame.
+When there are no detected hands, we set our Kalman prediction to be the entire original frame. Our final pipeline is listed in Algorithm \ref{pipeline}.
 
 
 
@@ -126,8 +128,6 @@ When there are no detected hands, we set our Kalman prediction to be the entire 
 \label{all}
 \end{figure}
 
-Thus, our final pipeline is listed in Algorithm \ref{pipeline}.
-
 \begin{algorithm}
 \caption{Pipeline for Improving Hand Tracking Accuracy with a Poorly Trained Hand Detector.}
 \label{pipeline}
@@ -142,8 +142,9 @@ Thus, our final pipeline is listed in Algorithm \ref{pipeline}.
 \item {\bf Optical Flow.} Use Lucas-Kanade to compute the optical flow of the detected corners, finding the corresponding points (if they exist) in the subsequent frame. Sum all the vector displacements (green vectors) to compute the overall velocity of the hand (white vector).
 \item {\bf Kalman Update.} Update our Kalman Filter with the measured position and velocity of our detected hand, and repeat on the next frame.
 \end{enumerate}
-
 \end{algorithm}
+
+\subsection{Building the Google Maps Application}
 
 \section{Results}
 
