@@ -135,7 +135,7 @@ When there are no detected hands, we set our Kalman prediction to be the entire 
 \noindent Given the current frame and the next frame:
 \begin{enumerate}
 \item {\bf Face Removal.} Apply OpenCV's frontal face detector and remove all detected faces.
-\item {\bf Background Subtraction.} Eliminate the background through background subtraction.
+\item {\bf Background Subtraction.} Eliminate the background by subtracting the intensities in the current frame and previous $n$-th frame, and threshold the difference.
 \item {\bf Kalman Prediction.} Use our simplified Kalman filter to predict the likely bounding box of the hand in the current frame. If the previous frame had no detected hand, then our Kalman filter will estimate the entire frame as the bounding box.
 \item {\bf Hand Detection.} Apply our hand detector within the bounding box (blue box) predicted by our Kalman Filter. If there are multiple detections (yellow boxes), take the first hand with the largest bounding box (green box)
 \item {\bf Corner Detection.} If there are no detections, then output $(0,0)$ as our velocity. If there is a detection, compute the corners (red points) within the bounding box of our hand.
