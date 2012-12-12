@@ -92,7 +92,7 @@ class FullPipeline(Pipeline):
                  haarScaleFactor=1.1, haarMinNeighbors=60,
                  minDistThreshold=5, maxDistThreshold=50,
                  window_width=100, window_height=180,
-                 threshold=20, nframes=20, directionScale=0.1):
+                 threshold=20, nframes=20, directionScale=0.02):
         self.face_cascade = detect.CascadeDetector(face_cascade_name)
         self.hand_cascade = detect.CascadeDetector(hand_cascade_name)
         self.optical = detect.LKOpticalFlow(min_threshold=minDistThreshold,
@@ -137,7 +137,7 @@ class NoFaceKalmanPipeline(Pipeline):
                  haarScaleFactor=1.1, haarMinNeighbors=60,
                  minDistThreshold=5, maxDistThreshold=50,
                  window_width=100, window_height=180,
-                 directionScale=0.1):
+                 directionScale=0.02):
         self.face_cascade = detect.CascadeDetector(face_cascade_name)
         self.hand_cascade = detect.CascadeDetector(hand_cascade_name)
         self.optical = detect.LKOpticalFlow(min_threshold=minDistThreshold,
@@ -256,7 +256,7 @@ class FullScreenshotPipeline(Pipeline):
                  haarScaleFactor=1.1, haarMinNeighbors=60,
                  minDistThreshold=5, maxDistThreshold=50,
                  window_width=100, window_height=180,
-                 threshold=20, nframes=20, directionScale=0.1):
+                 threshold=20, nframes=20, directionScale=0.02):
         self.face_cascade = detect.CascadeDetector(face_cascade_name)
         self.hand_cascade = detect.CascadeDetector(hand_cascade_name)
         self.optical = detect.LKOpticalFlow(min_threshold=minDistThreshold,
