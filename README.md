@@ -32,16 +32,7 @@ To choose a different pipeline, choose one of the following, e.g.:
 
     python pipeline.py --pipeline=nofacekalman
 
-Below are the possible options:
-
-1. full - all the stages
-2. simple - simple hand detection with no pipeline
-3. face - detect faces
-4. noface - remove faces
-5. nofacekalman - remove faces, apply a kalman filter
-6. screenshot - see all the individual stages of the pipeline
-
-To see more flags, use the `-h` flag:
+To see all the pipeline types and more flags, use the `-h` flag:
 
     python pipeline.py -h
 
